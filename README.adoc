@@ -1,0 +1,15 @@
+== Build
+
+To use vcpkg manifest mode, remove .bak extension from vcpkg*.bak files.
+[source]
+----
+cmake --preset default/ninja
+cmake --build build
+----
+
+executable under build/app1
+
+== License
+
+This project is licensed as
+https://creativecommons.org/publicdomain/zero/1.0/[CC0 1.0 Universal]

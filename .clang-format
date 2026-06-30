@@ -1,0 +1,6 @@
+ColumnLimit: 132
+IndentWidth: 2
+BinPackArguments: false
+AlignAfterOpenBracket: BlockIndent
+ContinuationIndentWidth: 2
+PointerAlignment: Left
