@@ -79,6 +79,7 @@ find_program(SLANGC_EXECUTABLE slangc HINTS $ENV{VULKAN_SDK}/bin REQUIRED)
 function (add_slang_shader_target TARGET)
   cmake_parse_arguments ("SHADER" "" "APP_NAME" "SOURCES" ${ARGN})
   set (SHADERS_DIR "${CMAKE_BINARY_DIR}/${SHADER_APP_NAME}/shaders")
+  file(GLOB_RECURSE SLANG_MODULE_DEPS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.slang")
 
   add_custom_command (
           OUTPUT ${SHADERS_DIR}
@@ -102,7 +103,7 @@ function (add_slang_shader_target TARGET)
             OUTPUT  ${SPV_OUTPUT_FULLPATH}
             COMMAND ${SLANGC_EXECUTABLE} ${SHADER_SOURCE} -target spirv -profile spirv_1_4+spvRayQueryKHR -emit-spirv-directly -fvk-use-entrypoint-name ${ENTRY_POINTS} -o ${SPV_OUTPUT_FILENAME}
             WORKING_DIRECTORY ${SHADERS_DIR}
-            DEPENDS ${SHADER_SOURCE} ${SHADERS_DIR}
+            DEPENDS ${SHADER_SOURCE} ${SLANG_MODULE_DEPS} ${SHADERS_DIR}
             COMMENT "Compiling Slang Shader: ${SHADER_SOURCE}"
             VERBATIM
     )
