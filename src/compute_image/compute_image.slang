@@ -8,7 +8,17 @@ ConstantBuffer<UniformBuffer> ubo;
 
 RWStructuredBuffer<uint> pixels;
 
+bool hit_sphere(const point3 center, float radius, const ray r) {
+    vec3 oc = center - r.orig;
+    float a = dot(r.dir, r.dir);
+    float b = -2.0 * dot(r.dir, oc);
+    float c = dot(oc, oc) - radius*radius;
+    float discriminant = b*b - 4*a*c;
+    return (discriminant >= 0);
+}
 color ray_color(const ray r) {
+  if (hit_sphere(point3(0, 0, -1), 0.5, r))
+    return color(1, 0, 0);
   vec3 unit_direction = normalize(r.dir);
   float a = 0.5 * (unit_direction.y + 1.0);
   return (1.0-a)*color(1.0, 1.0, 1.0) + a*color(0.5, 0.7, 1.0);
@@ -26,7 +36,7 @@ void compMain(uint3 threadId: SV_DispatchThreadID) {
   float aspect_ratio = 1.0;
   float focal_length = 1.0;
   float viewport_height = 2.0;
-  float viewport_width = viewport_height * (width / height);
+  float viewport_width = viewport_height * ((float)width / height);
   point3 camera_center = point3(0, 0, 0);
 
   // Calculate the vectors across the horizontal and down the vertical viewport edges.
