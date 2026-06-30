@@ -1,6 +1,10 @@
 import rt;
 
 struct UniformBuffer {
+  precision_type4 pixel00_loc;
+  precision_type4 pixel_delta_u;
+  precision_type4 pixel_delta_v;
+  precision_type4 camera_center;
   uint4 renderExtent;
   float deltaTime;
 };
@@ -8,20 +12,38 @@ ConstantBuffer<UniformBuffer> ubo;
 
 RWStructuredBuffer<uint> pixels;
 
-bool hit_sphere(const point3 center, float radius, const ray r) {
-    vec3 oc = center - r.orig;
-    float a = dot(r.dir, r.dir);
-    float b = -2.0 * dot(r.dir, oc);
-    float c = dot(oc, oc) - radius*radius;
-    float discriminant = b*b - 4*a*c;
-    return (discriminant >= 0);
+color ray_color(inout uint state, ray r, uint maxDepth, const hittable world) {
+  color throughput = color(1.0);
+  color result = color(0.0);
+
+  for (uint depth = 0; depth < maxDepth; depth++) {
+    hit_record rec;
+    if (world.hit(r, { 0.001, INF }, rec))
+    {
+      vec3 direction = rec.normal + random_unit_vector(state);
+      throughput *= 0.5;
+      r = ray(rec.p, direction);
+    } else {
+      vec3 unit_direction = normalize(r.dir);
+      precision_type a = 0.5 * (unit_direction.y + 1.0);
+      color sky = (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+      result += throughput * sky;
+      break;
+    }
+  }
+
+  return result;
 }
-color ray_color(const ray r) {
-  if (hit_sphere(point3(0, 0, -1), 0.5, r))
-    return color(1, 0, 0);
-  vec3 unit_direction = normalize(r.dir);
-  float a = 0.5 * (unit_direction.y + 1.0);
-  return (1.0-a)*color(1.0, 1.0, 1.0) + a*color(0.5, 0.7, 1.0);
+ray get_ray(uint i, uint j, inout uint state) {
+  vec3 offset = sample_square(state);
+  point3 pixel_sample = ubo.pixel00_loc.rgb
+                      + ((i + offset.x) * ubo.pixel_delta_u.rgb)
+                      + ((j + offset.y) * ubo.pixel_delta_v.rgb);
+
+  point3 ray_origin = ubo.camera_center.rgb;
+  vec3 ray_direction = pixel_sample - ray_origin;
+
+  return ray(ray_origin, ray_direction);
 }
 
 [shader("compute")]
@@ -33,31 +55,25 @@ void compMain(uint3 threadId: SV_DispatchThreadID) {
     return;
   }
 
-  float aspect_ratio = 1.0;
-  float focal_length = 1.0;
-  float viewport_height = 2.0;
-  float viewport_width = viewport_height * ((float)width / height);
-  point3 camera_center = point3(0, 0, 0);
+  hittable_list<sphere, 2> world;
+  world.clear();
+  world.add(sphere(point3(0, 0, -1), 0.5));
+  world.add(sphere(point3(0, -100.5, -1), 100));
 
-  // Calculate the vectors across the horizontal and down the vertical viewport edges.
-  vec3 viewport_u = vec3(viewport_width, 0, 0);
-  vec3 viewport_v = vec3(0, -viewport_height, 0);
-
-  // Calculate the horizontal and vertical delta vectors from pixel to pixel.
-  float3 pixel_delta_u = viewport_u / width;
-  float3 pixel_delta_v = viewport_v / height;
-
-  // Calculate the location of the upper left pixel.
-  float3 viewport_upper_left = camera_center - vec3(0, 0, focal_length) - viewport_u/2 - viewport_v/2;
-  float3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+  point3 camera_center = ubo.camera_center.rgb;
+  vec3 pixel_delta_u = ubo.pixel_delta_u.rgb;
+  vec3 pixel_delta_v = ubo.pixel_delta_v.rgb;
+  point3 pixel00_loc = ubo.pixel00_loc.rgb;
 
   point3 pixel_center = pixel00_loc + (threadId.x * pixel_delta_u) + (threadId.y * pixel_delta_v);
   vec3 ray_direction = pixel_center - camera_center;
   ray r = { camera_center, ray_direction };
 
-  color pixel_color = ray_color(r);
-  // pixel_color.r = 255.999 * (float(threadId.x) / float(width - 1));
-  // pixel_color.g = 255.999 * (float(threadId.y) / float(height - 1));
-  // pixel_color.b = 0;
-  pixels[threadId.y * width + threadId.x] = float3_to_packed_uint(pixel_color);
+  color pixel_color = { 0. };
+  uint state = threadId.y * width + threadId.x;
+  for (int sample = 0; sample < SAMPLES_PER_PIXEL; ++sample) {
+    ray r = get_ray(threadId.x, threadId.y, state);
+    pixel_color += ray_color(state, r, MAX_DEPTH,world);
+  }
+  pixels[threadId.y * width + threadId.x] = precision_type3_to_packed_uint(pixel_color);
 }

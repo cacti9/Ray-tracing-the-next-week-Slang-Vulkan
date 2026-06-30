@@ -157,8 +157,7 @@ void VulkanRenderer::pickPhysicalDevice() {
       vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
       vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>();
     bool supportsRequiredFeatures =
-      features.template get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy &&
-      features.template get<vk::PhysicalDeviceFeatures2>().features.shaderSampledImageArrayDynamicIndexing &&
+      features.template get<vk::PhysicalDeviceFeatures2>().features.shaderFloat64 &&
       features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
       features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
       features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState &&
@@ -222,7 +221,7 @@ void VulkanRenderer::createLogicalDevice() {
     vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>
     featureChain = {
       // vk::PhysicalDeviceFeatures2
-      {.features = {.samplerAnisotropy = true, .shaderSampledImageArrayDynamicIndexing = true}},
+      {.features = {.shaderFloat64 = true}},
       // vk::PhysicalDeviceVulkan11Features
       {.shaderDrawParameters = true},
       // vk::PhysicalDeviceVulkan13Features

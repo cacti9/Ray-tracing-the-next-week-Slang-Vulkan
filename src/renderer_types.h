@@ -25,7 +25,12 @@ constexpr uint32_t WIDTH = 800;
 constexpr uint32_t HEIGHT = 800;
 constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
+using precision_type = double;
 struct UniformBufferObject {
+  glm::vec<4, precision_type, glm::defaultp> pixel00_loc;
+  glm::vec<4, precision_type, glm::defaultp> pixel_delta_u;
+  glm::vec<4, precision_type, glm::defaultp> pixel_delta_v;
+  glm::vec<4, precision_type, glm::defaultp> camera_center;
   glm::uvec4 renderExtent;
   float deltaTime;
 };

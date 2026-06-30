@@ -1,7 +1,7 @@
 #include "renderer.h"
 #include <chrono>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
 #include <vector>
 
@@ -13,13 +13,20 @@ void writeBmp32(const char* path, uint32_t width, uint32_t height, const void* b
   const int32_t topDownHeight = -static_cast<int32_t>(height);
 
   uint8_t fileHeader[14] = {
-    'B', 'M',
+    'B',
+    'M',
     static_cast<uint8_t>(fileSize),
     static_cast<uint8_t>(fileSize >> 8),
     static_cast<uint8_t>(fileSize >> 16),
     static_cast<uint8_t>(fileSize >> 24),
-    0, 0, 0, 0,
-    54, 0, 0, 0
+    0,
+    0,
+    0,
+    0,
+    54,
+    0,
+    0,
+    0
   };
 
   uint8_t infoHeader[40] = {};
@@ -35,7 +42,7 @@ void writeBmp32(const char* path, uint32_t width, uint32_t height, const void* b
   file.write(reinterpret_cast<char*>(infoHeader), sizeof(infoHeader));
   file.write(reinterpret_cast<const char*>(bgraPixels), pixelDataSize);
 }
-}
+} // namespace
 
 void VulkanRenderer::drawFrame() {
   auto [result, imageIndex] = swapChain.acquireNextImage(UINT64_MAX, nullptr, *inFlightFences[currentFrame]);
@@ -130,12 +137,31 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   ubo.renderExtent = glm::uvec4(swapChainExtent.width, swapChainExtent.height, currentImage, 0);
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
 
+  constexpr double focal_length = 1.0;
+  constexpr double viewport_height = 2.0;
+  double viewport_width = viewport_height * ((double)swapChainExtent.width / swapChainExtent.height);
+  glm::dvec3 camera_center{0.};
+  glm::dvec3 viewport_u{viewport_width, 0., 0.};
+  glm::dvec3 viewport_v{0., -viewport_height, 0.};
+
+  glm::dvec3 pixel_delta_u = viewport_u / (double)swapChainExtent.width;
+  glm::dvec3 pixel_delta_v = viewport_v / (double)swapChainExtent.height;
+  glm::dvec3 viewport_upper_left = camera_center - glm::dvec3(0, 0, focal_length) - viewport_u / 2. - viewport_v / 2.;
+  glm::dvec3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+  ubo.pixel00_loc = {pixel00_loc, 0.};
+  ubo.pixel_delta_u = {pixel_delta_u, 0.};
+  ubo.pixel_delta_v = {pixel_delta_v, 0.};
+  ubo.camera_center = {camera_center, 0.};
+
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
 void VulkanRenderer::savePixelBufferToBmp(uint32_t currentFrame) {
   std::vector<uint8_t> pixels(static_cast<size_t>(computeImageRenderer.pixelOutputSize()));
-  gpuResources->readDeviceLocalBuffer(computeImageRenderer.pixelBuffer(currentFrame), pixels.data(), computeImageRenderer.pixelOutputSize());
+  gpuResources->readDeviceLocalBuffer(
+    computeImageRenderer.pixelBuffer(currentFrame), pixels.data(), computeImageRenderer.pixelOutputSize()
+  );
   writeBmp32("compute_image.bmp", swapChainExtent.width, swapChainExtent.height, pixels.data());
 }
 
