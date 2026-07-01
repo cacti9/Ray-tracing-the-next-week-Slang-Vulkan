@@ -67,17 +67,19 @@ void compMain(uint3 threadId: SV_DispatchThreadID) {
     return;
   }
 
-  hittable_list<sphere, 4> world;
+  hittable_list<sphere, 5> world;
 
   Material material_ground = { MaterialType::Lambertian, reinterpret<uint[MATERIAL_DATA_SIZE]>(color( 0.8, 0.8, 0.0 )) };
   Material material_center = { MaterialType::Lambertian, reinterpret<uint[MATERIAL_DATA_SIZE]>(color(0.1, 0.2, 0.5)) };
-  Material material_left = { MaterialType::Metal, reinterpret<uint[MATERIAL_DATA_SIZE]>( Metal(color( 0.8, 0.8, 0.8 ),0.3)) };
+  Material material_left = { MaterialType::Dielectric, reinterpret<uint[MATERIAL_DATA_SIZE]>( Dielectric(1.5) ) };
+  Material material_bubble = { MaterialType::Dielectric, reinterpret<uint[MATERIAL_DATA_SIZE]>( Dielectric(1.0/1.5) ) };
   Material material_right = { MaterialType::Metal, reinterpret<uint[MATERIAL_DATA_SIZE]>(Metal(color( 0.8, 0.6, 0.2 ),1.0)) };
 
   world.clear();
   world.add(sphere(point3(0, -100.5, -1), 100, material_ground));
   world.add(sphere(point3(0, 0, -1.2), 0.5, material_center));
   world.add(sphere(point3(-1.0, 0.0, -1), 0.5, material_left));
+  world.add(sphere(point3(-1.0, 0.0, -1), 0.4, material_bubble));
   world.add(sphere(point3( 1.0, 0.0, -1), 0.5, material_right));
 
   point3 camera_center = ubo.camera_center.rgb;

@@ -31,6 +31,25 @@ public struct Material {
       scattered = ray(rec.p, reflected);
       attenuation = m.albedo;
       return (dot(scattered.dir, rec.normal) > 0);
+    case MaterialType::Dielectric:
+      Dielectric d = reinterpret<Dielectric>(data);
+      attenuation = color(1.0, 1.0, 1.0);
+      precision_type ri = rec.front_face ? (1.0/d.refraction_index) : d.refraction_index;
+
+      vec3 unit_direction = normalize(r_in.dir);
+      precision_type cos_theta = min(dot(-unit_direction, rec.normal), 1.0);
+      precision_type sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+
+      bool cannot_refract = ri * sin_theta > 1.0;
+      vec3 direction;
+
+      if (cannot_refract || d::reflectance(cos_theta, ri) > random(state))
+          direction = reflect(unit_direction, rec.normal);
+      else
+          direction = refract(unit_direction, rec.normal, ri);
+
+      scattered = ray(rec.p, direction);
+      return true;
     default:
       attenuation = {0.}; // idk
       return false; // idk
@@ -45,4 +64,15 @@ public struct Lambertian {
 public struct Metal {
   public color albedo;
   public precision_type fuzz;
+}
+
+public struct Dielectric {
+  public precision_type refraction_index;
+
+  public static precision_type reflectance(precision_type cosine, precision_type refraction_index) {
+    // Use Schlick's approximation for reflectance.
+    precision_type r0 = (1 - refraction_index) / (1 + refraction_index);
+    r0 = r0*r0;
+    return r0 + (1-r0)*pow((1 - cosine),5);
+  }
 }
