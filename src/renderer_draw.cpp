@@ -189,7 +189,11 @@ void VulkanRenderer::savePixelBufferToBmp(uint32_t currentFrame) {
 void VulkanRenderer::recordFrameCommandBuffer(uint32_t imageIndex) {
   frameCommandBuffers[currentFrame].reset();
   frameCommandBuffers[currentFrame].begin({});
-  computeImageRenderer.recordComputeDispatch(frameCommandBuffers[currentFrame], currentFrame);
+  if (redrawRequested) {
+    computeImageRenderer.recordComputeDispatch(frameCommandBuffers[currentFrame], currentFrame);
+    std::cerr << "compute dispatched." << std::endl;
+    redrawRequested--;
+  }
   recordBufferBarrier(
     frameCommandBuffers[currentFrame],
     computeImageRenderer.pixelBuffer(currentFrame),

@@ -4,6 +4,7 @@
 
 #include "compute_image/compute_image_renderer.h"
 #include "gpu_resources.h"
+#include "renderer_types.h"
 #include "vma_raii.h"
 
 class VulkanRenderer {
@@ -52,6 +53,7 @@ private:
 
   bool framebufferResized = false;
   bool saveBmpRequested = false;
+  int redrawRequested = MAX_FRAMES_IN_FLIGHT;
   double lastFrameTime = 0.0;
   double lastTime = 0.0f;
 
