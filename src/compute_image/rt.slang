@@ -19,6 +19,7 @@ __include "rt/hittable.slang";
 __include "rt/sphere.slang";
 __include "rt/hittable_list.slang";
 __include "rt/interval.slang";
+__include "rt/material.slang";
 
 
 public uint precision_type3_to_packed_uint(precision_type3 x) {

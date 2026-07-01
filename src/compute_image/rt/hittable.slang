@@ -3,6 +3,7 @@ implementing rt;
 public struct hit_record {
   public point3 p;
   public vec3 normal;
+  public Material mat;
   public precision_type t;
   public bool front_face;
 

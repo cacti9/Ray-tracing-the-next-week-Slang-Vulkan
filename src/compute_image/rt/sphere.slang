@@ -26,10 +26,12 @@ public struct sphere : hittable {
         rec.normal = (rec.p - center) / radius;
         vec3 outward_normal = (rec.p - center) / radius;
         rec.set_face_normal(r, outward_normal);
+        rec.mat = mat;
 
         return true;
     }
 
   public point3 center;
   public precision_type radius;
+  public Material mat;
 };
