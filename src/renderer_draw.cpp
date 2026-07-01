@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <glm/ext/quaternion_geometric.hpp>
 #include <vector>
 
 namespace {
@@ -139,17 +140,25 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
 
   constexpr double focal_length = 1.0;
   constexpr double vfov = 90.0;
+  const glm::dvec3 lookFrom{-2, 2, 1};
+  const glm::dvec3 lookAt{0, 0, -1};
+  const glm::dvec3 vup{0, 1, 0};
   constexpr double theta = vfov * 3.14159265358979323846264338327950288 / 180.0;
   const double h = std::tan(theta / 2.);
   const double viewport_height = 2.0 * h * focal_length;
   double viewport_width = viewport_height * ((double)swapChainExtent.width / swapChainExtent.height);
-  glm::dvec3 camera_center{0.};
-  glm::dvec3 viewport_u{viewport_width, 0., 0.};
-  glm::dvec3 viewport_v{0., -viewport_height, 0.};
+
+  glm::dvec3 camera_center = lookFrom;
+  glm::dvec3 w = glm::normalize(lookFrom - lookAt);
+  glm::dvec3 u = glm::normalize(glm::cross(vup, w));
+  glm::dvec3 v = glm::cross(w, u);
+
+  glm::dvec3 viewport_u = viewport_width * u;
+  glm::dvec3 viewport_v = viewport_height * -v;
 
   glm::dvec3 pixel_delta_u = viewport_u / (double)swapChainExtent.width;
   glm::dvec3 pixel_delta_v = viewport_v / (double)swapChainExtent.height;
-  glm::dvec3 viewport_upper_left = camera_center - glm::dvec3(0, 0, focal_length) - viewport_u / 2. - viewport_v / 2.;
+  glm::dvec3 viewport_upper_left = camera_center - (focal_length * w) - viewport_u / 2. - viewport_v / 2.;
   glm::dvec3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
   ubo.pixel00_loc = {pixel00_loc, 0.};
