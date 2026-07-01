@@ -5,7 +5,10 @@ struct UniformBuffer {
   precision_type4 pixel_delta_u;
   precision_type4 pixel_delta_v;
   precision_type4 camera_center;
+  precision_type4 defocus_disk_u;
+  precision_type4 defocus_disk_v;
   uint4 renderExtent;
+  float defocus_angle;
   float deltaTime;
 };
 ConstantBuffer<UniformBuffer> ubo;
@@ -40,13 +43,17 @@ color ray_color(inout uint state, ray r, uint maxDepth, const hittable world) {
   return color(0.0);
 }
 
+point3 defocus_disk_sample(inout uint state) {
+  point3 p = random_in_unit_disk(state);
+  return ubo.camera_center.rgb + (p.r * ubo.defocus_disk_u.rgb) + (p[1] * ubo.defocus_disk_v.rgb);
+}
 ray get_ray(uint i, uint j, inout uint state) {
   vec3 offset = sample_square(state);
   point3 pixel_sample = ubo.pixel00_loc.rgb
                       + ((i + offset.x) * ubo.pixel_delta_u.rgb)
                       + ((j + offset.y) * ubo.pixel_delta_v.rgb);
 
-  point3 ray_origin = ubo.camera_center.rgb;
+  point3 ray_origin = (ubo.defocus_angle <= 0.) ? ubo.camera_center.rgb : defocus_disk_sample(state);
   vec3 ray_direction = pixel_sample - ray_origin;
 
   return ray(ray_origin, ray_direction);

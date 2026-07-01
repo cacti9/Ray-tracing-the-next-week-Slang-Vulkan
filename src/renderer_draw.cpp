@@ -139,13 +139,17 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
 
   constexpr double focal_length = 1.0;
-  constexpr double vfov = 90.0;
+  constexpr double defocus_angle = 10.0;
+  constexpr double focus_dist = 3.4;
+
+  constexpr double vfov = 20.0;
   const glm::dvec3 lookFrom{-2, 2, 1};
   const glm::dvec3 lookAt{0, 0, -1};
   const glm::dvec3 vup{0, 1, 0};
+  constexpr auto degreesToRadians = [](double degrees) { return degrees * 3.14159265358979323846264338327950288 / 180.0; };
   constexpr double theta = vfov * 3.14159265358979323846264338327950288 / 180.0;
   const double h = std::tan(theta / 2.);
-  const double viewport_height = 2.0 * h * focal_length;
+  const double viewport_height = 2.0 * h * focus_dist;
   double viewport_width = viewport_height * ((double)swapChainExtent.width / swapChainExtent.height);
 
   glm::dvec3 camera_center = lookFrom;
@@ -158,8 +162,13 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
 
   glm::dvec3 pixel_delta_u = viewport_u / (double)swapChainExtent.width;
   glm::dvec3 pixel_delta_v = viewport_v / (double)swapChainExtent.height;
-  glm::dvec3 viewport_upper_left = camera_center - (focal_length * w) - viewport_u / 2. - viewport_v / 2.;
+  glm::dvec3 viewport_upper_left = camera_center - (focus_dist * w) - viewport_u / 2. - viewport_v / 2.;
   glm::dvec3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+  double defocus_radius = focus_dist * std::tan(degreesToRadians(defocus_angle / 2.));
+  ubo.defocus_disk_u = {u * defocus_radius, 0.};
+  ubo.defocus_disk_v = {v * defocus_radius, 0.};
+  ubo.defocus_angle = defocus_angle;
 
   ubo.pixel00_loc = {pixel00_loc, 0.};
   ubo.pixel_delta_u = {pixel_delta_u, 0.};

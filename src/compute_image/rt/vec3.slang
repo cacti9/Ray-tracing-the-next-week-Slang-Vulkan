@@ -37,6 +37,13 @@ public vec3 random_unit_vector(inout uint state) {
       return p / sqrt(lensq);
   }
 }
+public vec3 random_in_unit_disk(inout uint state) {
+  while (true) {
+    vec3 p = { random(state, -1, 1), random(state, -1, 1), 0 };
+      if (dot(p, p) < 1)
+        return p;
+  }
+}
 public vec3 random_on_hemisphere(inout uint state, const vec3 normal) {
   vec3 on_unit_sphere = random_unit_vector(state);
   if (dot(on_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
@@ -44,6 +51,7 @@ public vec3 random_on_hemisphere(inout uint state, const vec3 normal) {
   else
     return -on_unit_sphere;
 }
+
 public bool nearZero(precision_type3 v) {
     const precision_type s = 1e-8;
     return all(abs(v) < s);

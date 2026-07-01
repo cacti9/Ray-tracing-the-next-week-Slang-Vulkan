@@ -31,7 +31,10 @@ struct UniformBufferObject {
   glm::vec<4, precision_type, glm::defaultp> pixel_delta_u;
   glm::vec<4, precision_type, glm::defaultp> pixel_delta_v;
   glm::vec<4, precision_type, glm::defaultp> camera_center;
+  glm::vec<4, precision_type, glm::defaultp> defocus_disk_u;
+  glm::vec<4, precision_type, glm::defaultp> defocus_disk_v;
   glm::uvec4 renderExtent;
+  float defocus_angle;
   float deltaTime;
 };
 
