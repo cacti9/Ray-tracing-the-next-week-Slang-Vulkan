@@ -3,7 +3,7 @@
 To use vcpkg manifest mode, remove .bak extension from vcpkg*.bak files.
 [source]
 ----
-cmake --preset default/ninja
+cmake --preset ninja
 cmake --build build
 ----
 
