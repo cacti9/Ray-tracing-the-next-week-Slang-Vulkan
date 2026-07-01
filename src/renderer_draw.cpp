@@ -138,7 +138,10 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
 
   constexpr double focal_length = 1.0;
-  constexpr double viewport_height = 2.0;
+  constexpr double vfov = 90.0;
+  constexpr double theta = vfov * 3.14159265358979323846264338327950288 / 180.0;
+  const double h = std::tan(theta / 2.);
+  const double viewport_height = 2.0 * h * focal_length;
   double viewport_width = viewport_height * ((double)swapChainExtent.width / swapChainExtent.height);
   glm::dvec3 camera_center{0.};
   glm::dvec3 viewport_u{viewport_width, 0., 0.};
