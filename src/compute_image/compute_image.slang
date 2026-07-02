@@ -58,8 +58,9 @@ ray get_ray(inout uint rngState, uint i, uint j) {
 
   point3 ray_origin = (ubo.defocus_angle <= 0.) ? ubo.camera_center.rgb : defocus_disk_sample(rngState);
   vec3 ray_direction = pixel_sample - ray_origin;
+  precision_type ray_time = random(rngState);
 
-  return ray(ray_origin, ray_direction);
+  return ray(ray_origin, ray_direction, ray_time);
 }
 
 [shader("compute")]

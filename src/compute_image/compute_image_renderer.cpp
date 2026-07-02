@@ -75,12 +75,19 @@ void ComputeImageRenderer::populateWorld() {
     return static_cast<uint32_t>(materialsData.size() - 1);
   };
 
-  auto addSphere = [&](glm::vec<3, precision_type> center, precision_type radius, uint32_t materialIndex) {
-    Sphere sphere{.center = center, .radius = radius, .material_index = materialIndex};
+  auto addSphere = [&](glm::vec<3, precision_type> static_center, precision_type radius, uint32_t materialIndex) {
+    Sphere sphere{.center = {static_center, {0, 0, 0}, 0}, .radius = radius, .material_index = materialIndex};
     Hittable hittable{.type = HittableType::Sphere};
     std::memcpy(hittable.data.data(), &sphere, sizeof(sphere));
     hittablesData.push_back(hittable);
   };
+  auto addMovingSphere =
+    [&](glm::vec<3, precision_type> center1, glm::vec<3, precision_type> center2, precision_type radius, uint32_t materialIndex) {
+      Sphere sphere{.center = {center1, center2 - center1, 0}, .radius = radius, .material_index = materialIndex};
+      Hittable hittable{.type = HittableType::Sphere};
+      std::memcpy(hittable.data.data(), &sphere, sizeof(sphere));
+      hittablesData.push_back(hittable);
+    };
 
   const uint32_t groundMaterial = addLambertian({0.5, 0.5, 0.5});
   addSphere({0, -1000, 0}, 1000, groundMaterial);
@@ -97,7 +104,8 @@ void ComputeImageRenderer::populateWorld() {
       if (glm::length(center - glm::vec<3, precision_type>{4, 0.2, 0}) > 0.9) {
         if (chooseMat < 0.8) {
           const auto albedo = randomColor() * randomColor();
-          addSphere(center, 0.2, addLambertian(albedo));
+          auto center2 = center + glm::vec<3, precision_type>{0, randomRange(0, .5), 0};
+          addMovingSphere(center, center2, 0.2, addLambertian(albedo));
         } else if (chooseMat < 0.95) {
           const auto albedo = randomColorRange(0.5, 1.0);
           const precision_type fuzz = randomRange(0, 0.5);

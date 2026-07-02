@@ -32,12 +32,13 @@ public struct Hittable {
 };
 
 public struct Sphere : hittable {
-  public point3 center;
+  public ray center;
   public precision_type radius;
   public uint material_index;
 
   bool hit(const ray r, interval ray_t, inout hit_record rec) {
-    vec3 oc = center - r.orig;
+    point3 current_center = center.at(r.tm);
+    vec3 oc = current_center - r.orig;
     precision_type a = dot(r.dir, r.dir);
     precision_type h = dot(r.dir, oc);
     precision_type c = dot(oc, oc) - radius*radius;
@@ -58,9 +59,9 @@ public struct Sphere : hittable {
 
     rec.t = root;
     rec.p = r.at(rec.t);
-    rec.normal = (rec.p - center) / radius;
-    vec3 outward_normal = (rec.p - center) / radius;
+    vec3 outward_normal = (rec.p - current_center) / radius;
     rec.set_face_normal(r, outward_normal);
+    // get_sphere_uv(outward_normal, rec.u, rec.v);
     rec.material_index = material_index;
 
     return true;

@@ -43,7 +43,7 @@ public struct Lambertian : material {
     if (nearZero(scatter_direction))
       scatter_direction = rec.normal;
 
-    scattered = ray(rec.p, scatter_direction);
+    scattered = ray(rec.p, scatter_direction, r_in.tm);
     attenuation = albedo;
     return true;
   }
@@ -56,7 +56,7 @@ public struct Metal : material {
   bool scatter(inout uint rngState, const ray r_in, const hit_record rec, out color attenuation, inout ray scattered) {
     vec3 reflected = reflect(r_in.dir, rec.normal);
     reflected = normalize(reflected) + (fuzz * random_unit_vector(rngState));
-    scattered = ray(rec.p, reflected);
+    scattered = ray(rec.p, reflected, r_in.tm);
     attenuation = albedo;
     return (dot(scattered.dir, rec.normal) > 0);
   }
@@ -81,7 +81,7 @@ public struct Dielectric : material {
     else
       direction = refract(unit_direction, rec.normal, ri);
 
-    scattered = ray(rec.p, direction);
+    scattered = ray(rec.p, direction, r_in.tm);
     return true;
   }
 

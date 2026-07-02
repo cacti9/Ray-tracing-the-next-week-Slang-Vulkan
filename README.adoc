@@ -1,4 +1,4 @@
-This project is a Slang shader implementation of  _Ray Tracing in One Weekend_. 
+This project is a Slang shader implementation of  _Ray Tracing The Next Week_. 
 
 https://github.com/RayTracing/raytracing.github.io
 

@@ -41,6 +41,12 @@ struct UniformBufferObject {
   float defocus_angle;
 };
 
+struct ray {
+  glm::vec<3, precision_type> orig;
+  glm::vec<3, precision_type> dir;
+  precision_type tm;
+};
+
 enum class HittableType : uint32_t {
   Sphere = 0,
 };
@@ -51,7 +57,7 @@ struct Hittable {
 };
 // corresponds to Hittable.data
 struct Sphere {
-  glm::vec<3, precision_type> center;
+  ray center;
   precision_type radius;
   uint32_t material_index;
 };
