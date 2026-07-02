@@ -12,40 +12,40 @@ uint wangHash(uint seed) {
   seed = seed ^ (seed >> 15);
   return seed;
 }
-public precision_type random(inout uint state) {
-  state = wangHash(state);
-  return state / 4294967296.0;
+public precision_type random(inout uint rngState) {
+  rngState = wangHash(rngState);
+  return rngState / 4294967296.0;
 }
-public precision_type random(inout uint state, precision_type min, precision_type max) {
-  return min + (max - min) * random(state);
+public precision_type random(inout uint rngState, precision_type min, precision_type max) {
+  return min + (max - min) * random(rngState);
 }
-public vec3 sample_square(inout uint state) {
+public vec3 sample_square(inout uint rngState) {
   // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
-  return vec3(random(state) - 0.5, random(state) - 0.5, 0);
+  return vec3(random(rngState) - 0.5, random(rngState) - 0.5, 0);
 }
-public vec3 random3(inout uint state) {
-  return vec3(random(state), random(state), random(state));
+public vec3 random3(inout uint rngState) {
+  return vec3(random(rngState), random(rngState), random(rngState));
 }
-public vec3 random3(inout uint state, precision_type min, precision_type max) {
-  return vec3(random(state,min,max), random(state,min,max), random(state,min,max));
+public vec3 random3(inout uint rngState, precision_type min, precision_type max) {
+  return vec3(random(rngState,min,max), random(rngState,min,max), random(rngState,min,max));
 }
-public vec3 random_unit_vector(inout uint state) {
+public vec3 random_unit_vector(inout uint rngState) {
   while (true) {
-    vec3 p = random3(state, -1,1);
+    vec3 p = random3(rngState, -1,1);
     precision_type lensq = dot(p,p);
     if (1e-8 < lensq && lensq <= 1)
       return p / sqrt(lensq);
   }
 }
-public vec3 random_in_unit_disk(inout uint state) {
+public vec3 random_in_unit_disk(inout uint rngState) {
   while (true) {
-    vec3 p = { random(state, -1, 1), random(state, -1, 1), 0 };
+    vec3 p = { random(rngState, -1, 1), random(rngState, -1, 1), 0 };
       if (dot(p, p) < 1)
         return p;
   }
 }
-public vec3 random_on_hemisphere(inout uint state, const vec3 normal) {
-  vec3 on_unit_sphere = random_unit_vector(state);
+public vec3 random_on_hemisphere(inout uint rngState, const vec3 normal) {
+  vec3 on_unit_sphere = random_unit_vector(rngState);
   if (dot(on_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
     return on_unit_sphere;
   else
@@ -61,7 +61,7 @@ public vec3 reflect(const vec3 v, const vec3 n) {
   return v - 2*dot(v,n)*n;
 }
 
-public vec3 refract(const vec3 uv, const vec3 n, double etai_over_etat) {
+public vec3 refract(const vec3 uv, const vec3 n, precision_type etai_over_etat) {
   precision_type cos_theta = min(dot(-uv, n), 1.0);
   vec3 r_out_perp =  etai_over_etat * (uv + cos_theta*n);
   vec3 r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp,r_out_perp))) * n;

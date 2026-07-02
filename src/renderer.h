@@ -53,9 +53,7 @@ private:
 
   bool framebufferResized = false;
   bool saveBmpRequested = false;
-  int redrawRequested = MAX_FRAMES_IN_FLIGHT;
-  double lastFrameTime = 0.0;
-  double lastTime = 0.0f;
+  int redrawRequested = 0;
 
   std::vector<const char*> requiredDeviceExtension = {
     vk::KHRSwapchainExtensionName,

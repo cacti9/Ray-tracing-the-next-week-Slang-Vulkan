@@ -27,9 +27,6 @@ void VulkanRenderer::mainLoop() {
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
     drawFrame();
-    double currentTime = glfwGetTime();
-    lastFrameTime = (currentTime - lastTime) * 1000.0;
-    lastTime = currentTime;
   }
 
   device.waitIdle();
@@ -355,7 +352,7 @@ void VulkanRenderer::createDescriptorPool() {
   const uint32_t descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
   std::array poolSize{
     vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, descriptorSetCount},
-    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount},
+    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 3},
   };
   vk::DescriptorPoolCreateInfo poolInfo{
     .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,

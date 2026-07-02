@@ -1,13 +1,19 @@
 #include "compute_image_renderer.h"
+#include "renderer_types.h"
 
 #include <array>
+#include <cstdint>
+#include <cstring>
+#include <random>
 #include <string>
 #include <vector>
 
 void ComputeImageRenderer::createDescriptorSetLayout(vk::raii::Device const& device) {
   std::array layoutBindings{
     vk::DescriptorSetLayoutBinding{0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
-    vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr}
+    vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
+    vk::DescriptorSetLayoutBinding{2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
+    vk::DescriptorSetLayoutBinding{3, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
   };
 
   vk::DescriptorSetLayoutCreateInfo layoutInfo{
@@ -28,15 +34,107 @@ void ComputeImageRenderer::createComputePipeline(vk::raii::Device const& device)
   computePipeline = vk::raii::Pipeline(device, nullptr, pipelineInfo);
 }
 
+void ComputeImageRenderer::populateWorld() {
+  hittablesData.clear();
+  materialsData.clear();
+
+  std::mt19937 randomEngine{1};
+  std::uniform_real_distribution<precision_type> unitDistribution{0.0, 1.0};
+  auto random = [&]() { return unitDistribution(randomEngine); };
+  auto randomRange = [&](precision_type min, precision_type max) { return min + (max - min) * random(); };
+  auto randomColor = [&]() { return glm::vec<3, precision_type>{random(), random(), random()}; };
+  auto randomColorRange = [&](precision_type min, precision_type max) {
+    return glm::vec<3, precision_type>{
+      randomRange(min, max),
+      randomRange(min, max),
+      randomRange(min, max),
+    };
+  };
+
+  auto addLambertian = [&](glm::vec<3, precision_type> albedo) {
+    Lambertian lambertian{.albedo = albedo};
+    Material material{.type = MaterialType::Lambertian};
+    std::memcpy(material.data.data(), &lambertian, sizeof(lambertian));
+    materialsData.push_back(material);
+    return static_cast<uint32_t>(materialsData.size() - 1);
+  };
+
+  auto addMetal = [&](glm::vec<3, precision_type> albedo, precision_type fuzz) {
+    Metal metal{.albedo = albedo, .fuzz = fuzz};
+    Material material{.type = MaterialType::Metal};
+    std::memcpy(material.data.data(), &metal, sizeof(metal));
+    materialsData.push_back(material);
+    return static_cast<uint32_t>(materialsData.size() - 1);
+  };
+
+  auto addDielectric = [&](precision_type refractionIndex) {
+    Dielectric dielectric{.refraction_index = refractionIndex};
+    Material material{.type = MaterialType::Dielectric};
+    std::memcpy(material.data.data(), &dielectric, sizeof(dielectric));
+    materialsData.push_back(material);
+    return static_cast<uint32_t>(materialsData.size() - 1);
+  };
+
+  auto addSphere = [&](glm::vec<3, precision_type> center, precision_type radius, uint32_t materialIndex) {
+    Sphere sphere{.center = center, .radius = radius, .material_index = materialIndex};
+    Hittable hittable{.type = HittableType::Sphere};
+    std::memcpy(hittable.data.data(), &sphere, sizeof(sphere));
+    hittablesData.push_back(hittable);
+  };
+
+  const uint32_t groundMaterial = addLambertian({0.5, 0.5, 0.5});
+  addSphere({0, -1000, 0}, 1000, groundMaterial);
+
+  for (int a = -11; a < 11; a++) {
+    for (int b = -11; b < 11; b++) {
+      const precision_type chooseMat = random();
+      const glm::vec<3, precision_type> center{
+        a + 0.9 * random(),
+        0.2,
+        b + 0.9 * random(),
+      };
+
+      if (glm::length(center - glm::vec<3, precision_type>{4, 0.2, 0}) > 0.9) {
+        if (chooseMat < 0.8) {
+          const auto albedo = randomColor() * randomColor();
+          addSphere(center, 0.2, addLambertian(albedo));
+        } else if (chooseMat < 0.95) {
+          const auto albedo = randomColorRange(0.5, 1.0);
+          const precision_type fuzz = randomRange(0, 0.5);
+          addSphere(center, 0.2, addMetal(albedo, fuzz));
+        } else {
+          addSphere(center, 0.2, addDielectric(1.5));
+        }
+      }
+    }
+  }
+
+  addSphere({0, 1, 0}, 1.0, addDielectric(1.5));
+  addSphere({-4, 1, 0}, 1.0, addLambertian({0.4, 0.2, 0.1}));
+  addSphere({4, 1, 0}, 1.0, addMetal({0.7, 0.6, 0.5}, 0.0));
+
+  hittableBufferSize = sizeof(Hittable) * hittablesData.size();
+  materialBufferSize = sizeof(Material) * materialsData.size();
+}
 void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2D const& extent) {
   for (auto& pixelBuffer : pixelBuffers) {
     gpuResources.destroyBuffer(pixelBuffer);
+  }
+  for (auto& hittableBuffer : hittableBuffers) {
+    gpuResources.destroyBuffer(hittableBuffer);
+  }
+  for (auto& materialBuffer : materialBuffers) {
+    gpuResources.destroyBuffer(materialBuffer);
   }
   renderExtent = extent;
   const size_t pixelCount = static_cast<size_t>(renderExtent.width) * static_cast<size_t>(renderExtent.height);
   pixelBufferSize = sizeof(uint32_t) * pixelCount;
 
+  populateWorld();
+
   pixelBuffers.clear();
+  hittableBuffers.clear();
+  materialBuffers.clear();
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vk::Buffer pixelBuffer;
     gpuResources.createDeviceLocalBuffer(
@@ -45,6 +143,24 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
     );
     pixelBuffers.push_back(pixelBuffer);
+
+    vk::Buffer hittableBuffer;
+    gpuResources.createDeviceLocalBuffer(
+      hittableBuffer,
+      hittableBufferSize,
+      hittablesData.data(),
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+    );
+    hittableBuffers.push_back(hittableBuffer);
+
+    vk::Buffer materialBuffer;
+    gpuResources.createDeviceLocalBuffer(
+      materialBuffer,
+      materialBufferSize,
+      materialsData.data(),
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+    );
+    materialBuffers.push_back(materialBuffer);
   }
 }
 
@@ -63,6 +179,8 @@ void ComputeImageRenderer::createDescriptorSets(
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vk::DescriptorBufferInfo bufferInfo{uniformBuffers[i], 0, sizeof(UniformBufferObject)};
     vk::DescriptorBufferInfo pixelBufferInfo{pixelBuffers[i], 0, pixelBufferSize};
+    vk::DescriptorBufferInfo hittableBufferInfo{hittableBuffers[i], 0, hittableBufferSize};
+    vk::DescriptorBufferInfo materialBufferInfo{materialBuffers[i], 0, materialBufferSize};
     std::array descriptorWrites{
       vk::WriteDescriptorSet{
         .dstSet = *descriptorSets[i],
@@ -79,6 +197,22 @@ void ComputeImageRenderer::createDescriptorSets(
         .descriptorCount = 1,
         .descriptorType = vk::DescriptorType::eStorageBuffer,
         .pBufferInfo = &pixelBufferInfo,
+      },
+      vk::WriteDescriptorSet{
+        .dstSet = *descriptorSets[i],
+        .dstBinding = 2,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &hittableBufferInfo,
+      },
+      vk::WriteDescriptorSet{
+        .dstSet = *descriptorSets[i],
+        .dstBinding = 3,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &materialBufferInfo,
       },
     };
     device.updateDescriptorSets(descriptorWrites, {});

@@ -128,23 +128,16 @@ void VulkanRenderer::cleanupSwapChain() {
 }
 
 void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
-  static auto startTime = std::chrono::high_resolution_clock::now();
-
-  auto currentTime = std::chrono::high_resolution_clock::now();
-  float time = std::chrono::duration<float>(currentTime - startTime).count() / 3.0f;
-  const float deltaSeconds = static_cast<float>(lastFrameTime) / 1000.0f;
-
-  UniformBufferObject ubo{};
-  ubo.renderExtent = glm::uvec4(swapChainExtent.width, swapChainExtent.height, currentImage, 0);
-  ubo.deltaTime = static_cast<float>(lastFrameTime) * 2.0f;
+  UniformBufferObject ubo{.max_depth = 10, .samples_per_pixel = 10};
+  ubo.renderExtent = glm::uvec2(swapChainExtent.width, swapChainExtent.height);
 
   constexpr double focal_length = 1.0;
-  constexpr double defocus_angle = 10.0;
-  constexpr double focus_dist = 3.4;
+  constexpr double defocus_angle = 0.6;
+  constexpr double focus_dist = 10.0;
 
   constexpr double vfov = 20.0;
-  const glm::dvec3 lookFrom{-2, 2, 1};
-  const glm::dvec3 lookAt{0, 0, -1};
+  const glm::dvec3 lookFrom{13, 2, 3};
+  const glm::dvec3 lookAt{0, 0, 0};
   const glm::dvec3 vup{0, 1, 0};
   constexpr auto degreesToRadians = [](double degrees) { return degrees * 3.14159265358979323846264338327950288 / 180.0; };
   constexpr double theta = vfov * 3.14159265358979323846264338327950288 / 180.0;
@@ -174,6 +167,7 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   ubo.pixel_delta_u = {pixel_delta_u, 0.};
   ubo.pixel_delta_v = {pixel_delta_v, 0.};
   ubo.camera_center = {camera_center, 0.};
+  ubo.hittable_count = computeImageRenderer.hittablesData.size();
 
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }

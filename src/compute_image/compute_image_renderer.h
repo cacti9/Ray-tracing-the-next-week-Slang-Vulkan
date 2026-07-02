@@ -12,10 +12,17 @@ struct ComputeImageRenderer {
   std::vector<vk::raii::DescriptorSet> descriptorSets;
   std::vector<vk::Buffer> pixelBuffers;
   vk::DeviceSize pixelBufferSize = 0;
+  std::vector<vk::Buffer> hittableBuffers;
+  std::vector<Hittable> hittablesData;
+  vk::DeviceSize hittableBufferSize = 0;
+  std::vector<vk::Buffer> materialBuffers;
+  std::vector<Material> materialsData;
+  vk::DeviceSize materialBufferSize = 0;
   vk::Extent2D renderExtent{};
 
   void createDescriptorSetLayout(vk::raii::Device const& device);
   void createComputePipeline(vk::raii::Device const& device);
+  void populateWorld();
   void createBuffers(GpuResources& gpuResources, vk::Extent2D const& extent);
   void createDescriptorSets(
     vk::raii::Device const& device, vk::raii::DescriptorPool const& descriptorPool, std::vector<vk::Buffer> const& uniformBuffers
