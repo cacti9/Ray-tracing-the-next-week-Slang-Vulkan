@@ -128,7 +128,7 @@ void VulkanRenderer::cleanupSwapChain() {
 }
 
 void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
-  UniformBufferObject ubo{.max_depth = 10, .samples_per_pixel = 10};
+  UniformBufferObject ubo{.max_depth = maxDepthRequested, .samples_per_pixel = samplesPerPixelRequested};
   ubo.renderExtent = glm::uvec2(swapChainExtent.width, swapChainExtent.height);
 
   constexpr double focal_length = 1.0;

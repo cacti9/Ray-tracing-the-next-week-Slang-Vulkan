@@ -16,6 +16,26 @@ cmake --build build
 
 executable under build/app1
 
+== Design Choices
+
+It is possible to use double precision by chaning `precision_type` on "renderer_types.h" and "compute_image/rt.slang". 
+Default is `float`.
+
+Creating the hittable list is too expensive on shader; cpu creates and uploads with SSBO.
+The related code is in `populateWorld()` and `createBuffers()`.
+
+Pointer and polymorphism is limited on shader; pointer is substituted with index of SSBO.
+
+To maintain similarity to polymorphic hittables and materials, SSBO is an array of tagged union. 
+However, shader does not support `union`, so it is mimicked with Slang's reinterpret<T>.
+
+The "Camera" code is distributed across "compute_image.slang" (where compMain() is) and `updateUniformBuffer`.
+I just did not want to add camera.cpp next to Vulkan code.
+
+== Help
+
+I only tested code on Linux and Nvidia GPU. I would be grateful to know errors on other platforms.
+
 == License
 
 This project is licensed as

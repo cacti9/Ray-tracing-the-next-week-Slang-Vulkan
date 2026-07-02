@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 #include <optional>
 #include <vector>
@@ -15,6 +16,8 @@ public:
     mainLoop();
     cleanup();
   }
+  uint32_t maxDepthRequested = 10;
+  uint32_t samplesPerPixelRequested = 10;
 
 private:
   GLFWwindow* window = nullptr;
