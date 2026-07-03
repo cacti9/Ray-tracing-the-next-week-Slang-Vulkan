@@ -131,16 +131,15 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   UniformBufferObject ubo{.max_depth = maxDepthRequested, .samples_per_pixel = samplesPerPixelRequested};
   ubo.renderExtent = glm::uvec2(swapChainExtent.width, swapChainExtent.height);
 
-  constexpr double focal_length = 1.0;
-  constexpr double defocus_angle = 0.6;
-  constexpr double focus_dist = 10.0;
-
-  constexpr double vfov = 20.0;
-  const glm::dvec3 lookFrom{13, 2, 3};
-  const glm::dvec3 lookAt{0, 0, 0};
-  const glm::dvec3 vup{0, 1, 0};
+  const CameraSettings& camera = computeImageRenderer.cameraSettings;
+  const double defocus_angle = camera.defocus_angle;
+  const double focus_dist = camera.focus_dist;
+  const double vfov = camera.vfov;
+  const glm::dvec3& lookFrom = camera.look_from;
+  const glm::dvec3& lookAt = camera.look_at;
+  const glm::dvec3& vup = camera.vup;
   constexpr auto degreesToRadians = [](double degrees) { return degrees * 3.14159265358979323846264338327950288 / 180.0; };
-  constexpr double theta = vfov * 3.14159265358979323846264338327950288 / 180.0;
+  const double theta = vfov * 3.14159265358979323846264338327950288 / 180.0;
   const double h = std::tan(theta / 2.);
   const double viewport_height = 2.0 * h * focus_dist;
   double viewport_width = viewport_height * ((double)swapChainExtent.width / swapChainExtent.height);

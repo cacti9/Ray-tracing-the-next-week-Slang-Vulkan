@@ -352,7 +352,7 @@ void VulkanRenderer::createDescriptorPool() {
   const uint32_t descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
   std::array poolSize{
     vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, descriptorSetCount},
-    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 3},
+    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 4},
   };
   vk::DescriptorPoolCreateInfo poolInfo{
     .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,

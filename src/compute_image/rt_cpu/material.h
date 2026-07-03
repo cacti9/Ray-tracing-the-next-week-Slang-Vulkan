@@ -22,7 +22,7 @@ struct Material {
 };
 
 struct Lambertian {
-  glm::vec<3, precision_type> albedo;
+  uint32_t texture_index;
 };
 
 struct Metal {

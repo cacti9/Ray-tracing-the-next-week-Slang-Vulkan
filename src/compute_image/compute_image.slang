@@ -18,6 +18,7 @@ ConstantBuffer<UniformBuffer> ubo;
 RWStructuredBuffer<uint> pixels;
 StructuredBuffer<Hittable> the_world;
 StructuredBuffer<Material> the_world_mat;
+StructuredBuffer<Texture> the_textures;
 
 color ray_color(inout uint rngState, ray r, uint maxDepth) {
   color throughput = color(1.0);
@@ -28,7 +29,7 @@ color ray_color(inout uint rngState, ray r, uint maxDepth) {
   for (uint depth = 0; depth < maxDepth; depth++) {
 
     if (hit(the_world, ubo.hittable_count, r, interval( 0.001, INF ), rec)) {
-      if (the_world_mat[rec.material_index].scatter(rngState, r, rec, attenuation, scattered)) {
+      if (the_world_mat[rec.material_index].scatter(the_textures, rngState, r, rec, attenuation, scattered)) {
         throughput *= attenuation;
         r = scattered;
       } else {

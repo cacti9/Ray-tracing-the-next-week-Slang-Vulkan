@@ -2,6 +2,7 @@
 
 #include "hittable.h"
 #include "material.h"
+#include "texture.h"
 
 #include <algorithm>
 #include <cassert>
@@ -14,12 +15,15 @@
 struct RtCpuBuilder {
   std::vector<Hittable>& hittables;
   std::vector<Material>& materials;
+  std::vector<Texture>& textures;
 
-  RtCpuBuilder(std::vector<Hittable>& hittables_, std::vector<Material>& materials_)
-      : hittables(hittables_), materials(materials_) {}
+  RtCpuBuilder(std::vector<Hittable>& hittables_, std::vector<Material>& materials_, std::vector<Texture>& textures_)
+      : hittables(hittables_), materials(materials_), textures(textures_) {}
 
-  uint32_t addLambertian(glm::vec<3, precision_type> albedo) {
-    return addMaterial(MaterialType::Lambertian, Lambertian{.albedo = albedo});
+  uint32_t addLambertian(glm::vec<3, precision_type> albedo) { return addLambertian(addSolidColor(albedo)); }
+
+  uint32_t addLambertian(uint32_t textureIndex) {
+    return addMaterial(MaterialType::Lambertian, Lambertian{.texture_index = textureIndex});
   }
 
   uint32_t addMetal(glm::vec<3, precision_type> albedo, precision_type fuzz) {
@@ -46,6 +50,21 @@ struct RtCpuBuilder {
     addHittable(HittableType::Sphere, Aabb(sphere_bbox(center1, clampedRadius), sphere_bbox(center2, clampedRadius)), sphere);
   }
 
+  uint32_t addSolidColor(glm::vec<3, precision_type> albedo) {
+    return addTexture(TextureType::SolidColor, SolidColor{.albedo = albedo});
+  }
+
+  uint32_t addCheckerTexture(precision_type scale, uint32_t evenTextureIndex, uint32_t oddTextureIndex) {
+    return addTexture(
+      TextureType::Checker,
+      CheckerTexture{.inv_scale = 1.0f / scale, .even_texture_index = evenTextureIndex, .odd_texture_index = oddTextureIndex}
+    );
+  }
+
+  uint32_t addCheckerTexture(precision_type scale, glm::vec<3, precision_type> even, glm::vec<3, precision_type> odd) {
+    return addCheckerTexture(scale, addSolidColor(even), addSolidColor(odd));
+  }
+
 private:
   template <typename Target, typename Payload> static void packPayload(Target& target, const Payload& payload) {
     static_assert(std::is_trivially_copyable_v<Payload>);
@@ -64,6 +83,13 @@ private:
     Hittable hittable{.type = type, .bbox = bbox};
     packPayload(hittable, payload);
     hittables.push_back(hittable);
+  }
+
+  template <typename Payload> uint32_t addTexture(TextureType type, const Payload& payload) {
+    Texture texture{.type = type};
+    packPayload(texture, payload);
+    textures.push_back(texture);
+    return static_cast<uint32_t>(textures.size() - 1);
   }
 
   static Aabb sphere_bbox(glm::vec<3, precision_type> center, precision_type radius) {

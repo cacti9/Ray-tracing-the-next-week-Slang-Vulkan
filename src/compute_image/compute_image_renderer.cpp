@@ -1,7 +1,6 @@
 #include "compute_image_renderer.h"
 
 #include <array>
-#include <random>
 #include <string>
 #include <vector>
 
@@ -11,6 +10,7 @@ void ComputeImageRenderer::createDescriptorSetLayout(vk::raii::Device const& dev
     vk::DescriptorSetLayoutBinding{1, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
     vk::DescriptorSetLayoutBinding{2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
     vk::DescriptorSetLayoutBinding{3, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
+    vk::DescriptorSetLayoutBinding{4, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
   };
 
   vk::DescriptorSetLayoutCreateInfo layoutInfo{
@@ -31,62 +31,6 @@ void ComputeImageRenderer::createComputePipeline(vk::raii::Device const& device)
   computePipeline = vk::raii::Pipeline(device, nullptr, pipelineInfo);
 }
 
-void ComputeImageRenderer::populateWorld() {
-  hittablesData.clear();
-  materialsData.clear();
-
-  std::mt19937 randomEngine{1};
-  std::uniform_real_distribution<precision_type> unitDistribution{0.0, 1.0};
-  auto random = [&]() { return unitDistribution(randomEngine); };
-  auto randomRange = [&](precision_type min, precision_type max) { return min + (max - min) * random(); };
-  auto randomColor = [&]() { return glm::vec<3, precision_type>{random(), random(), random()}; };
-  auto randomColorRange = [&](precision_type min, precision_type max) {
-    return glm::vec<3, precision_type>{
-      randomRange(min, max),
-      randomRange(min, max),
-      randomRange(min, max),
-    };
-  };
-
-  RtCpuBuilder builder(hittablesData, materialsData);
-
-  const uint32_t groundMaterial = builder.addLambertian({0.5, 0.5, 0.5});
-  builder.addStaticSphere({0, -1000, 0}, 1000, groundMaterial);
-
-  for (int a = -11; a < 11; a++) {
-    for (int b = -11; b < 11; b++) {
-      const precision_type chooseMat = random();
-      const glm::vec<3, precision_type> center{
-        a + 0.9 * random(),
-        0.2,
-        b + 0.9 * random(),
-      };
-
-      if (glm::length(center - glm::vec<3, precision_type>{4, 0.2, 0}) > 0.9) {
-        if (chooseMat < 0.8) {
-          const auto albedo = randomColor() * randomColor();
-          auto center2 = center + glm::vec<3, precision_type>{0, randomRange(0, .5), 0};
-          builder.addMovingSphere(center, center2, 0.2, builder.addLambertian(albedo));
-        } else if (chooseMat < 0.95) {
-          const auto albedo = randomColorRange(0.5, 1.0);
-          const precision_type fuzz = randomRange(0, 0.5);
-          builder.addStaticSphere(center, 0.2, builder.addMetal(albedo, fuzz));
-        } else {
-          builder.addStaticSphere(center, 0.2, builder.addDielectric(1.5));
-        }
-      }
-    }
-  }
-
-  builder.addStaticSphere({0, 1, 0}, 1.0, builder.addDielectric(1.5));
-  builder.addStaticSphere({-4, 1, 0}, 1.0, builder.addLambertian({0.4, 0.2, 0.1}));
-  builder.addStaticSphere({4, 1, 0}, 1.0, builder.addMetal({0.7, 0.6, 0.5}, 0.0));
-
-  BvhBuilder(hittablesData).build();
-
-  hittableBufferSize = sizeof(Hittable) * hittablesData.size();
-  materialBufferSize = sizeof(Material) * materialsData.size();
-}
 void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2D const& extent) {
   for (auto& pixelBuffer : pixelBuffers) {
     gpuResources.destroyBuffer(pixelBuffer);
@@ -97,6 +41,9 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
   for (auto& materialBuffer : materialBuffers) {
     gpuResources.destroyBuffer(materialBuffer);
   }
+  for (auto& textureBuffer : textureBuffers) {
+    gpuResources.destroyBuffer(textureBuffer);
+  }
   renderExtent = extent;
   const size_t pixelCount = static_cast<size_t>(renderExtent.width) * static_cast<size_t>(renderExtent.height);
   pixelBufferSize = sizeof(uint32_t) * pixelCount;
@@ -106,6 +53,7 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
   pixelBuffers.clear();
   hittableBuffers.clear();
   materialBuffers.clear();
+  textureBuffers.clear();
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vk::Buffer pixelBuffer;
     gpuResources.createDeviceLocalBuffer(
@@ -132,6 +80,12 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
     );
     materialBuffers.push_back(materialBuffer);
+
+    vk::Buffer textureBuffer;
+    gpuResources.createDeviceLocalBuffer(
+      textureBuffer, textureBufferSize, texturesData.data(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+    );
+    textureBuffers.push_back(textureBuffer);
   }
 }
 
@@ -152,6 +106,7 @@ void ComputeImageRenderer::createDescriptorSets(
     vk::DescriptorBufferInfo pixelBufferInfo{pixelBuffers[i], 0, pixelBufferSize};
     vk::DescriptorBufferInfo hittableBufferInfo{hittableBuffers[i], 0, hittableBufferSize};
     vk::DescriptorBufferInfo materialBufferInfo{materialBuffers[i], 0, materialBufferSize};
+    vk::DescriptorBufferInfo textureBufferInfo{textureBuffers[i], 0, textureBufferSize};
     std::array descriptorWrites{
       vk::WriteDescriptorSet{
         .dstSet = *descriptorSets[i],
@@ -184,6 +139,14 @@ void ComputeImageRenderer::createDescriptorSets(
         .descriptorCount = 1,
         .descriptorType = vk::DescriptorType::eStorageBuffer,
         .pBufferInfo = &materialBufferInfo,
+      },
+      vk::WriteDescriptorSet{
+        .dstSet = *descriptorSets[i],
+        .dstBinding = 4,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &textureBufferInfo,
       },
     };
     device.updateDescriptorSets(descriptorWrites, {});

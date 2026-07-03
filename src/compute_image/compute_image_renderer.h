@@ -19,6 +19,10 @@ struct ComputeImageRenderer {
   std::vector<vk::Buffer> materialBuffers;
   std::vector<Material> materialsData;
   vk::DeviceSize materialBufferSize = 0;
+  std::vector<vk::Buffer> textureBuffers;
+  std::vector<Texture> texturesData;
+  vk::DeviceSize textureBufferSize = 0;
+  CameraSettings cameraSettings;
   vk::Extent2D renderExtent{};
 
   void createDescriptorSetLayout(vk::raii::Device const& device);

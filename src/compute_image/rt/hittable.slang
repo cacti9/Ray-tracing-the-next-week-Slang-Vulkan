@@ -5,6 +5,8 @@ public struct hit_record {
   public vec3 normal;
   public uint material_index;
   public precision_type t;
+  public precision_type u;
+  public precision_type v;
   public bool front_face;
 
   [mutating]
@@ -32,6 +34,14 @@ public struct Hittable {
   public aabb bbox;
   public uint[HITTABLE_DATA_SIZE] data;
 };
+
+public void get_sphere_uv(const point3 p, out precision_type u, out precision_type v) {
+  precision_type theta = acos(-p.y);
+  precision_type phi = atan2(-p.z, p.x) + PI;
+
+  u = phi / (2.0 * PI);
+  v = theta / PI;
+}
 
 public struct Sphere : hittable {
   public ray center;
@@ -62,8 +72,8 @@ public struct Sphere : hittable {
     rec.t = root;
     rec.p = r.at(rec.t);
     vec3 outward_normal = (rec.p - current_center) / radius;
+    get_sphere_uv(outward_normal, rec.u, rec.v);
     rec.set_face_normal(r, outward_normal);
-    // get_sphere_uv(outward_normal, rec.u, rec.v);
     rec.material_index = material_index;
 
     return true;
@@ -76,12 +86,6 @@ public struct BvhNode : hittable {
 
   bool hit(const ray r, interval ray_t, inout hit_record rec) { return false; }
 }
-
-// // role of shared pointer<type>
-// public struct hittableRef {
-//   uint type;
-//   uint index; // index in SSBO
-// };
 
 public bool hit(
   StructuredBuffer<Hittable> world,

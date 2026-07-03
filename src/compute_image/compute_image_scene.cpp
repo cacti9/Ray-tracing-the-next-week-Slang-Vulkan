@@ -1,0 +1,102 @@
+#include "compute_image_renderer.h"
+
+#include <random>
+
+namespace {
+void bouncing_spheres(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {13, 2, 3},
+    .look_at = {0, 0, 0},
+    .vup = {0, 1, 0},
+    .vfov = 20.0,
+    .defocus_angle = 0.6,
+    .focus_dist = 10.0,
+  };
+
+  std::mt19937 randomEngine{1};
+  std::uniform_real_distribution<precision_type> unitDistribution{0.0, 1.0};
+  auto random = [&]() { return unitDistribution(randomEngine); };
+  auto randomRange = [&](precision_type min, precision_type max) { return min + (max - min) * random(); };
+  auto randomColor = [&]() { return glm::vec<3, precision_type>{random(), random(), random()}; };
+  auto randomColorRange = [&](precision_type min, precision_type max) {
+    return glm::vec<3, precision_type>{
+      randomRange(min, max),
+      randomRange(min, max),
+      randomRange(min, max),
+    };
+  };
+
+  const uint32_t checker = builder.addCheckerTexture(0.32, {0.2, 0.3, 0.1}, {0.9, 0.9, 0.9});
+  const uint32_t groundMaterial = builder.addLambertian(checker);
+  builder.addStaticSphere({0, -1000, 0}, 1000, groundMaterial);
+
+  for (int a = -11; a < 11; a++) {
+    for (int b = -11; b < 11; b++) {
+      const precision_type chooseMat = random();
+      const glm::vec<3, precision_type> center{
+        a + 0.9 * random(),
+        0.2,
+        b + 0.9 * random(),
+      };
+
+      if (glm::length(center - glm::vec<3, precision_type>{4, 0.2, 0}) > 0.9) {
+        if (chooseMat < 0.8) {
+          const auto albedo = randomColor() * randomColor();
+          auto center2 = center + glm::vec<3, precision_type>{0, randomRange(0, .5), 0};
+          builder.addMovingSphere(center, center2, 0.2, builder.addLambertian(albedo));
+        } else if (chooseMat < 0.95) {
+          const auto albedo = randomColorRange(0.5, 1.0);
+          const precision_type fuzz = randomRange(0, 0.5);
+          builder.addStaticSphere(center, 0.2, builder.addMetal(albedo, fuzz));
+        } else {
+          builder.addStaticSphere(center, 0.2, builder.addDielectric(1.5));
+        }
+      }
+    }
+  }
+
+  builder.addStaticSphere({0, 1, 0}, 1.0, builder.addDielectric(1.5));
+  builder.addStaticSphere({-4, 1, 0}, 1.0, builder.addLambertian({0.4, 0.2, 0.1}));
+  builder.addStaticSphere({4, 1, 0}, 1.0, builder.addMetal({0.7, 0.6, 0.5}, 0.0));
+}
+
+void checkered_spheres(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {13, 2, 3},
+    .look_at = {0, 0, 0},
+    .vup = {0, 1, 0},
+    .vfov = 20.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t checker = builder.addCheckerTexture(0.32, {0.2, 0.3, 0.1}, {0.9, 0.9, 0.9});
+  const uint32_t checkerMaterial = builder.addLambertian(checker);
+
+  builder.addStaticSphere({0, -10, 0}, 10, checkerMaterial);
+  builder.addStaticSphere({0, 10, 0}, 10, checkerMaterial);
+}
+} // namespace
+
+void ComputeImageRenderer::populateWorld() {
+  hittablesData.clear();
+  materialsData.clear();
+  texturesData.clear();
+
+  RtCpuBuilder builder(hittablesData, materialsData, texturesData);
+
+  switch (2) {
+  case 1:
+    bouncing_spheres(builder, cameraSettings);
+    break;
+  case 2:
+    checkered_spheres(builder, cameraSettings);
+    break;
+  }
+
+  BvhBuilder(hittablesData).build();
+
+  hittableBufferSize = sizeof(Hittable) * hittablesData.size();
+  materialBufferSize = sizeof(Material) * materialsData.size();
+  textureBufferSize = sizeof(Texture) * texturesData.size();
+}
