@@ -1,8 +1,8 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <glm/fwd.hpp>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -27,6 +27,8 @@ constexpr uint32_t HEIGHT = 800;
 constexpr int MAX_FRAMES_IN_FLIGHT = 1;
 
 using precision_type = float;
+constexpr precision_type INF = std::numeric_limits<precision_type>::infinity();
+
 struct UniformBufferObject {
   glm::vec<4, precision_type> pixel00_loc;
   glm::vec<4, precision_type> pixel_delta_u;
@@ -39,49 +41,6 @@ struct UniformBufferObject {
   uint32_t max_depth;
   uint32_t samples_per_pixel;
   float defocus_angle;
-};
-
-struct ray {
-  glm::vec<3, precision_type> orig;
-  glm::vec<3, precision_type> dir;
-  precision_type tm;
-};
-
-enum class HittableType : uint32_t {
-  Sphere = 0,
-};
-constexpr uint32_t HITTABLE_DATA_SIZE = 16;
-struct Hittable {
-  HittableType type;
-  std::array<uint32_t, HITTABLE_DATA_SIZE> data;
-};
-// corresponds to Hittable.data
-struct Sphere {
-  ray center;
-  precision_type radius;
-  uint32_t material_index;
-};
-
-enum class MaterialType : uint32_t {
-  Lambertian = 0,
-  Metal,
-  Dielectric,
-};
-constexpr uint32_t MATERIAL_DATA_SIZE = 8;
-constexpr uint32_t MATERIAL_DATA_BYTES = MATERIAL_DATA_SIZE * sizeof(uint32_t);
-struct Material {
-  MaterialType type;
-  std::array<uint32_t, MATERIAL_DATA_SIZE> data;
-};
-struct Lambertian {
-  glm::vec<3, precision_type> albedo;
-};
-struct Metal {
-  glm::vec<3, precision_type> albedo;
-  precision_type fuzz;
-};
-struct Dielectric {
-  precision_type refraction_index;
 };
 
 struct ShaderLoader {

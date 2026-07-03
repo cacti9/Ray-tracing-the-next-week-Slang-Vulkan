@@ -1,0 +1,35 @@
+#pragma once
+
+#include "renderer_types.h"
+
+#include <array>
+#include <cstdint>
+
+#include <glm/glm.hpp>
+
+enum class MaterialType : uint32_t {
+  Lambertian = 0,
+  Metal,
+  Dielectric,
+};
+
+constexpr uint32_t MATERIAL_DATA_SIZE = 8;
+constexpr uint32_t MATERIAL_DATA_BYTES = MATERIAL_DATA_SIZE * sizeof(uint32_t);
+
+struct Material {
+  MaterialType type;
+  std::array<uint32_t, MATERIAL_DATA_SIZE> data;
+};
+
+struct Lambertian {
+  glm::vec<3, precision_type> albedo;
+};
+
+struct Metal {
+  glm::vec<3, precision_type> albedo;
+  precision_type fuzz;
+};
+
+struct Dielectric {
+  precision_type refraction_index;
+};

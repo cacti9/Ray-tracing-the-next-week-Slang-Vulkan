@@ -16,6 +16,7 @@ __include "rt/ray.slang";
 __include "rt/hittable.slang";
 __include "rt/interval.slang";
 __include "rt/material.slang";
+__include "rt/aabb.slang";
 
 
 public uint precision_type3_to_packed_uint(precision_type3 x, precision_type samples_per_pixel) {

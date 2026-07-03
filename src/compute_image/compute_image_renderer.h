@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "gpu_resources.h"
+#include "rt_cpu_types.h"
 
 struct ComputeImageRenderer {
   vk::raii::DescriptorSetLayout descriptorSetLayout = nullptr;

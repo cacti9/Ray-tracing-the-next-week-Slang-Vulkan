@@ -27,7 +27,7 @@ color ray_color(inout uint rngState, ray r, uint maxDepth) {
   color attenuation;
   for (uint depth = 0; depth < maxDepth; depth++) {
 
-    if (hit(the_world, ubo.hittable_count, r, { 0.001, INF }, rec)) {
+    if (hit(the_world, ubo.hittable_count, r, interval( 0.001, INF ), rec)) {
       if (the_world_mat[rec.material_index].scatter(rngState, r, rec, attenuation, scattered)) {
         throughput *= attenuation;
         r = scattered;

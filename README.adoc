@@ -3,7 +3,7 @@ This project is a Slang shader implementation of  _Ray Tracing The Next Week_.
 https://github.com/RayTracing/raytracing.github.io
 
 == The output
-image::rendered_pictures/float_depth50_sample500.bmp[Rendered image, width=800]
+image::rendered_pictures/float_depth500_sample500.bmp[Rendered image, width=800]
 
 == Build
 
@@ -29,8 +29,14 @@ Pointer and polymorphism is limited on shader; pointer is substituted with index
 To maintain similarity to polymorphic hittables and materials, SSBO is an array of tagged union. 
 However, shader does not support `union`, so it is mimicked with Slang's reinterpret<T>.
 
+On BVH traversal, the hit() needs access to SSBO. Rather than passing around SSBO handle, the traversal happens on only on global hit().
+
 The "Camera" code is distributed across "compute_image.slang" (where compMain() is) and `updateUniformBuffer`.
 I just did not want to add camera.cpp next to Vulkan code.
+
+From Book 2 implementation, C++ code is added for CPU, because BVH construction happens on CPU side. Mostly preserves the original code.
+
+Instead of each hittable's constructor, there is a builder for it.
 
 == Help
 

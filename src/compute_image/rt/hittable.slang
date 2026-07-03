@@ -22,12 +22,14 @@ internal interface hittable {
 }
 
 public enum HittableType {
+  BvhNode,
   Sphere,
 };
 
 public static const uint HITTABLE_DATA_SIZE = 16;
 public struct Hittable {
   public HittableType type;
+  public aabb bbox;
   public uint[HITTABLE_DATA_SIZE] data;
 };
 
@@ -68,6 +70,13 @@ public struct Sphere : hittable {
   }
 };
 
+public struct BvhNode : hittable {
+  public uint left;
+  public uint right;
+
+  bool hit(const ray r, interval ray_t, inout hit_record rec) { return false; }
+}
+
 // // role of shared pointer<type>
 // public struct hittableRef {
 //   uint type;
@@ -83,13 +92,35 @@ public bool hit(
   hit_record temp_rec;
   bool hit_anything = false;
   precision_type closest_so_far = ray_t.max;
+  uint stack[64];
+  uint stack_size = 0;
 
-  for (uint i = 0; i < hittable_count; i++) {
+  if (hittable_count == 0)
+    return false;
+
+  stack[stack_size++] = hittable_count - 1;
+
+  while (stack_size > 0) {
+    uint hittable_index = stack[--stack_size];
     bool hit_on_curr_hittable = false;
-    switch (world[i].type) {
+    switch (world[hittable_index].type) {
     case HittableType::Sphere:
-      Sphere sphere = reinterpret<Sphere>(world[i].data);
-      hit_on_curr_hittable = sphere.hit(r, {ray_t.min, closest_so_far}, temp_rec);
+      Sphere sphere = reinterpret<Sphere>(world[hittable_index].data);
+      hit_on_curr_hittable = sphere.hit(r, interval(ray_t.min, closest_so_far), temp_rec);
+      break;
+    case HittableType::BvhNode:
+      BvhNode node = reinterpret<BvhNode>(world[hittable_index].data);
+      if (world[hittable_index].bbox.hit(r, interval(ray_t.min, closest_so_far))) {
+        if (node.left == node.right) {
+          if (stack_size < 64)
+            stack[stack_size++] = node.left;
+        } else {
+          if (stack_size + 1 < 64) {
+            stack[stack_size++] = node.left;
+            stack[stack_size++] = node.right;
+          }
+        }
+      }
       break;
     default:
       continue;
