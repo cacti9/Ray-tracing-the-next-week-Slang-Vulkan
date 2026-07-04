@@ -166,6 +166,7 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   ubo.pixel_delta_u = {pixel_delta_u, 0.};
   ubo.pixel_delta_v = {pixel_delta_v, 0.};
   ubo.camera_center = {camera_center, 0.};
+  ubo.background = {camera.background, 0.};
   ubo.hittable_count = computeImageRenderer.hittablesData.size();
 
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));

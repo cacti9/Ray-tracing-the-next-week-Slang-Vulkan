@@ -6,6 +6,9 @@ https://github.com/RayTracing/raytracing.github.io
 image::rendered_pictures/float_depth100_sample500_1.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_2.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_3.bmp[Rendered image, width=600]
+image::rendered_pictures/float_depth100_sample500_4.bmp[Rendered image, width=600]
+image::rendered_pictures/float_depth100_sample500_5.bmp[Rendered image, width=600]
+image::rendered_pictures/float_depth100_sample500_6.bmp[Rendered image, width=600]
 
 == Build
 

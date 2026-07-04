@@ -7,6 +7,7 @@ struct UniformBuffer {
   precision_type4 camera_center;
   precision_type4 defocus_disk_u;
   precision_type4 defocus_disk_v;
+  precision_type4 background;
   uint2 renderExtent;
   uint hittable_count;
   uint max_depth;
@@ -25,7 +26,8 @@ struct UniformBuffer {
 
 color ray_color(inout uint rngState, ray r, uint maxDepth) {
   TextureContext texture_context = { the_textures, image_textures, image_sampler, the_perlins };
-  color throughput = color(1.0);
+  color path_weight = color(1.0);
+  color accumulated = color(0.0);
 
   hit_record rec;
   ray scattered;
@@ -33,22 +35,23 @@ color ray_color(inout uint rngState, ray r, uint maxDepth) {
   for (uint depth = 0; depth < maxDepth; depth++) {
 
     if (hit(the_world, ubo.hittable_count, r, interval( 0.001, INF ), rec)) {
-      if (the_world_mat[rec.material_index].scatter(texture_context, rngState, r, rec, attenuation, scattered)) {
-        throughput *= attenuation;
-        r = scattered;
-      } else {
-        return color(0.0);
-      }
-    } else {
-      vec3 unit_direction = normalize(r.dir);
-      precision_type a = 0.5 * (unit_direction.y + 1.0);
-      color sky = (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+      Material material = the_world_mat[rec.material_index];
+      color from_emission = path_weight * material.emitted(texture_context, rec.u, rec.v, rec.p);
+      accumulated += from_emission;
 
-      return throughput * sky;
+      if (material.scatter(texture_context, rngState, r, rec, attenuation, scattered)) { // 1. hit an object with reflective material
+        path_weight *= attenuation;
+        r = scattered;
+      } else { // 2. hit an object, but does not reflect. mostly light emitting material
+        return accumulated;
+      }
+    } else { // 3. hit the background
+      color from_background = path_weight * ubo.background.rgb;
+      return accumulated + from_background;
     }
   }
 
-  return color(0.0);
+  return accumulated;
 }
 
 point3 defocus_disk_sample(inout uint rngState) {

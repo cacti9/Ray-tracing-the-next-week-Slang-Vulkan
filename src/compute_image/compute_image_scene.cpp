@@ -131,6 +131,52 @@ void quads(RtCpuBuilder& builder, CameraSettings& camera) {
   builder.addQuad({-2, 3, 1}, {4, 0, 0}, {0, 0, 4}, upperOrange);
   builder.addQuad({-2, -3, 5}, {4, 0, 0}, {0, 0, -4}, lowerTeal);
 }
+
+void simple_light(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {26, 3, 6},
+    .look_at = {0, 2, 0},
+    .vup = {0, 1, 0},
+    .background = {0, 0, 0},
+    .vfov = 20.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t perlinTexture = builder.addNoiseTexture(4);
+  const uint32_t perlinMaterial = builder.addLambertian(perlinTexture);
+
+  builder.addStaticSphere({0, -1000, 0}, 1000, perlinMaterial);
+  builder.addStaticSphere({0, 2, 0}, 2, perlinMaterial);
+
+  const uint32_t difflight = builder.addDiffuseLight({4, 4, 4});
+  builder.addStaticSphere({0, 7, 0}, 2, difflight);
+  builder.addQuad({3, 1, -2}, {2, 0, 0}, {0, 2, 0}, difflight);
+}
+
+void cornell_box(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {278, 278, -800},
+    .look_at = {278, 278, 0},
+    .vup = {0, 1, 0},
+    .background = {0, 0, 0},
+    .vfov = 40.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t red = builder.addLambertian({0.65, 0.05, 0.05});
+  const uint32_t white = builder.addLambertian({0.73, 0.73, 0.73});
+  const uint32_t green = builder.addLambertian({0.12, 0.45, 0.15});
+  const uint32_t light = builder.addDiffuseLight({15, 15, 15});
+
+  builder.addQuad({555, 0, 0}, {0, 555, 0}, {0, 0, 555}, green);
+  builder.addQuad({0, 0, 0}, {0, 555, 0}, {0, 0, 555}, red);
+  builder.addQuad({343, 554, 332}, {-130, 0, 0}, {0, 0, -105}, light);
+  builder.addQuad({0, 0, 0}, {555, 0, 0}, {0, 0, 555}, white);
+  builder.addQuad({555, 555, 555}, {-555, 0, 0}, {0, 0, -555}, white);
+  builder.addQuad({0, 0, 555}, {555, 0, 0}, {0, 555, 0}, white);
+}
 } // namespace
 
 void ComputeImageRenderer::populateWorld() {
@@ -142,7 +188,7 @@ void ComputeImageRenderer::populateWorld() {
 
   RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData);
 
-  switch (5) {
+  switch (7) {
   case 1:
     bouncing_spheres(builder, cameraSettings);
     break;
@@ -158,14 +204,18 @@ void ComputeImageRenderer::populateWorld() {
   case 5:
     quads(builder, cameraSettings);
     break;
+  case 6:
+    simple_light(builder, cameraSettings);
+    break;
+  case 7:
+    cornell_box(builder, cameraSettings);
+    break;
   }
 
   BvhBuilder(hittablesData).build();
 
-  // prevents zero
-  if (perlinsData.empty()) {
-    perlinsData.push_back({});
-  }
+  if (perlinsData.empty())
+    perlinsData.emplace_back();
 
   hittableBufferSize = sizeof(Hittable) * hittablesData.size();
   materialBufferSize = sizeof(Material) * materialsData.size();

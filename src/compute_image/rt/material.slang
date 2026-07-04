@@ -15,12 +15,23 @@ public enum MaterialType {
   Lambertian,
   Metal,
   Dielectric,
+  DiffuseLight,
 };
 
 public static const uint MATERIAL_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 8 : 4;
 public struct Material : material {
   public MaterialType type; // 32bit
   public uint[MATERIAL_DATA_SIZE] data;
+
+  public color emitted(TextureContext texture_context, precision_type u, precision_type v, point3 p) {
+    switch (type) {
+    case MaterialType::DiffuseLight:
+      DiffuseLight light = reinterpret<DiffuseLight>(data);
+      return light.emitted(texture_context, u, v, p);
+    default:
+      return color(0.0);
+    }
+  }
 
   public bool scatter(
     TextureContext texture_context,
@@ -40,6 +51,9 @@ public struct Material : material {
     case MaterialType::Dielectric:
       Dielectric d = reinterpret<Dielectric>(data);
       return d.scatter(texture_context, rngState, r_in, rec, attenuation, scattered);
+    case MaterialType::DiffuseLight:
+      attenuation = color(0.0);
+      return false;
     default:
       attenuation = {0.}; // idk
       return false; // idk
@@ -127,5 +141,25 @@ public struct Dielectric : material {
     precision_type x = 1 - cosine;
     precision_type x2 = x * x;
     return r0 + (1-r0) * x2 * x2 * x;
+  }
+}
+
+public struct DiffuseLight : material {
+  public uint texture_index;
+
+  color emitted(TextureContext texture_context, precision_type u, precision_type v, point3 p) {
+    return texture_value(texture_context, texture_index, u, v, p);
+  }
+
+  bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  ) {
+    attenuation = color(0.0);
+    return false;
   }
 }

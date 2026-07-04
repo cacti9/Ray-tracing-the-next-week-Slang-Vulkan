@@ -47,6 +47,7 @@ struct UniformBufferObject {
   glm::vec<4, precision_type> camera_center;
   glm::vec<4, precision_type> defocus_disk_u;
   glm::vec<4, precision_type> defocus_disk_v;
+  glm::vec<4, precision_type> background;
   glm::uvec2 renderExtent;
   uint32_t hittable_count;
   uint32_t max_depth;

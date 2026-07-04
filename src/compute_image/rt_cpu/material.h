@@ -11,6 +11,7 @@ enum class MaterialType : uint32_t {
   Lambertian = 0,
   Metal,
   Dielectric,
+  DiffuseLight,
 };
 
 constexpr uint32_t MATERIAL_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 8 : 4;
@@ -32,4 +33,8 @@ struct Metal {
 
 struct Dielectric {
   precision_type refraction_index;
+};
+
+struct DiffuseLight {
+  uint32_t texture_index;
 };

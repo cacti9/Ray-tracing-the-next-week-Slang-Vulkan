@@ -85,6 +85,12 @@ struct RtCpuBuilder {
     return addMaterial(MaterialType::Dielectric, Dielectric{.refraction_index = refractionIndex});
   }
 
+  uint32_t addDiffuseLight(glm::vec<3, precision_type> emit) { return addDiffuseLight(addSolidColor(emit)); }
+
+  uint32_t addDiffuseLight(uint32_t textureIndex) {
+    return addMaterial(MaterialType::DiffuseLight, DiffuseLight{.texture_index = textureIndex});
+  }
+
   void addStaticSphere(glm::vec<3, precision_type> static_center, precision_type radius, uint32_t materialIndex) {
     const precision_type clampedRadius = std::max(precision_type(0), radius);
     Sphere sphere{
