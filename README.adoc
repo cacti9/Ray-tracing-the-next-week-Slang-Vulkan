@@ -35,7 +35,7 @@ On BVH traversal, the hit() needs access to SSBO. Rather than passing around SSB
 
 From Book 2 implementation, C++ code is added for CPU, because BVH construction happens on CPU side. Mostly preserves the original code.
 
-Instead of each hittable's constructor, there is a builder for it.
+Instead of each hittable's constructor, there is a builder for it. Without builder, bbox on constructor requires unpacking to reach bbox on polymorphism.
 
 Just used Vulkan for texture sampler, instead of uploading pixel SSBO to shader.
 

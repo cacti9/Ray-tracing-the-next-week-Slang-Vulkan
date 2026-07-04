@@ -101,6 +101,23 @@ struct RtCpuBuilder {
     addHittable(HittableType::Sphere, Aabb(sphere_bbox(center1, clampedRadius), sphere_bbox(center2, clampedRadius)), sphere);
   }
 
+  void addQuad(
+    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex
+  ) {
+    const glm::vec<3, precision_type> n = glm::cross(u, v);
+    const glm::vec<3, precision_type> normal = glm::normalize(n);
+    Quad quad{
+      .Q = Q,
+      .u = u,
+      .v = v,
+      .w = n / glm::dot(n, n),
+      .normal = normal,
+      .D = glm::dot(normal, Q),
+      .material_index = materialIndex,
+    };
+    addHittable(HittableType::Quad, quad_bbox(Q, u, v), quad);
+  }
+
   uint32_t addSolidColor(glm::vec<3, precision_type> albedo) {
     return addTexture(TextureType::SolidColor, SolidColor{.albedo = albedo});
   }
@@ -158,6 +175,14 @@ private:
   static Aabb sphere_bbox(glm::vec<3, precision_type> center, precision_type radius) {
     const glm::vec<3, precision_type> rvec(radius, radius, radius);
     return Aabb(center - rvec, center + rvec);
+  }
+
+  static Aabb quad_bbox(
+    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v
+  ) {
+    const Aabb bboxDiagonal1(Q, Q + u + v);
+    const Aabb bboxDiagonal2(Q + u, Q + v);
+    return Aabb(bboxDiagonal1, bboxDiagonal2);
   }
 };
 

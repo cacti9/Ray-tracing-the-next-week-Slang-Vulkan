@@ -9,9 +9,10 @@
 enum class HittableType : uint32_t {
   BvhNode = 0,
   Sphere,
+  Quad,
 };
 
-constexpr uint32_t HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 20 : 16;
+constexpr uint32_t HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 40 : 24;
 constexpr uint32_t HITTABLE_DATA_BYTES = HITTABLE_DATA_SIZE * sizeof(uint32_t);
 
 struct Hittable {
@@ -23,6 +24,16 @@ struct Hittable {
 struct Sphere {
   ray center;
   precision_type radius;
+  uint32_t material_index;
+};
+
+struct Quad {
+  glm::vec<3, precision_type> Q;
+  glm::vec<3, precision_type> u;
+  glm::vec<3, precision_type> v;
+  glm::vec<3, precision_type> w;
+  glm::vec<3, precision_type> normal;
+  precision_type D;
   uint32_t material_index;
 };
 

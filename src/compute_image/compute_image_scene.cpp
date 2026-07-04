@@ -108,6 +108,29 @@ void perlin_spheres(RtCpuBuilder& builder, CameraSettings& camera) {
   builder.addStaticSphere({0, -1000, 0}, 1000, perlinMaterial);
   builder.addStaticSphere({0, 2, 0}, 2, perlinMaterial);
 }
+
+void quads(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {0, 0, 9},
+    .look_at = {0, 0, 0},
+    .vup = {0, 1, 0},
+    .vfov = 80.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t leftRed = builder.addLambertian({1.0, 0.2, 0.2});
+  const uint32_t backGreen = builder.addLambertian({0.2, 1.0, 0.2});
+  const uint32_t rightBlue = builder.addLambertian({0.2, 0.2, 1.0});
+  const uint32_t upperOrange = builder.addLambertian({1.0, 0.5, 0.0});
+  const uint32_t lowerTeal = builder.addLambertian({0.2, 0.8, 0.8});
+
+  builder.addQuad({-3, -2, 5}, {0, 0, -4}, {0, 4, 0}, leftRed);
+  builder.addQuad({-2, -2, 0}, {4, 0, 0}, {0, 4, 0}, backGreen);
+  builder.addQuad({3, -2, 1}, {0, 0, 4}, {0, 4, 0}, rightBlue);
+  builder.addQuad({-2, 3, 1}, {4, 0, 0}, {0, 0, 4}, upperOrange);
+  builder.addQuad({-2, -3, 5}, {4, 0, 0}, {0, 0, -4}, lowerTeal);
+}
 } // namespace
 
 void ComputeImageRenderer::populateWorld() {
@@ -119,7 +142,7 @@ void ComputeImageRenderer::populateWorld() {
 
   RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData);
 
-  switch (4) {
+  switch (5) {
   case 1:
     bouncing_spheres(builder, cameraSettings);
     break;
@@ -132,9 +155,17 @@ void ComputeImageRenderer::populateWorld() {
   case 4:
     perlin_spheres(builder, cameraSettings);
     break;
+  case 5:
+    quads(builder, cameraSettings);
+    break;
   }
 
   BvhBuilder(hittablesData).build();
+
+  // prevents zero
+  if (perlinsData.empty()) {
+    perlinsData.push_back({});
+  }
 
   hittableBufferSize = sizeof(Hittable) * hittablesData.size();
   materialBufferSize = sizeof(Material) * materialsData.size();

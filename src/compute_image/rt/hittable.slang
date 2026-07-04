@@ -26,9 +26,10 @@ internal interface hittable {
 public enum HittableType {
   BvhNode,
   Sphere,
+  Quad,
 };
 
-public static const uint HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 20 : 16;
+public static const uint HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 40 : 24;
 public struct Hittable {
   public HittableType type;
   public aabb bbox;
@@ -87,6 +88,53 @@ public struct BvhNode : hittable {
   bool hit(const ray r, interval ray_t, inout hit_record rec) { return false; }
 }
 
+public struct Quad : hittable {
+  public point3 Q;
+  public vec3 u;
+  public vec3 v;
+  public vec3 w;
+  public vec3 normal;
+  public precision_type D;
+  public uint material_index;
+
+  bool hit(const ray r, interval ray_t, inout hit_record rec) {
+    precision_type denom = dot(normal, r.dir);
+
+    if (abs(denom) < 1e-8)
+      return false;
+
+    precision_type t = (D - dot(normal, r.orig)) / denom;
+    if (!ray_t.contains(t))
+      return false;
+
+    point3 intersection = r.at(t);
+    vec3 planar_hitpt_vector = intersection - Q;
+    precision_type alpha = dot(w, cross(planar_hitpt_vector, v));
+    precision_type beta = dot(w, cross(u, planar_hitpt_vector));
+
+    if (!is_interior(alpha, beta, rec))
+      return false;
+
+    rec.t = t;
+    rec.p = intersection;
+    rec.set_face_normal(r, normal);
+    rec.material_index = material_index;
+
+    return true;
+  }
+
+  bool is_interior(precision_type a, precision_type b, inout hit_record rec) {
+    interval unit_interval = interval(0, 1);
+
+    if (!unit_interval.contains(a) || !unit_interval.contains(b))
+      return false;
+
+    rec.u = a;
+    rec.v = b;
+    return true;
+  }
+}
+
 public bool hit(
   StructuredBuffer<Hittable> world,
   uint hittable_count,
@@ -111,6 +159,10 @@ public bool hit(
     case HittableType::Sphere:
       Sphere sphere = reinterpret<Sphere>(world[hittable_index].data);
       hit_on_curr_hittable = sphere.hit(r, interval(ray_t.min, closest_so_far), temp_rec);
+      break;
+    case HittableType::Quad:
+      Quad quad = reinterpret<Quad>(world[hittable_index].data);
+      hit_on_curr_hittable = quad.hit(r, interval(ray_t.min, closest_so_far), temp_rec);
       break;
     case HittableType::BvhNode:
       BvhNode node = reinterpret<BvhNode>(world[hittable_index].data);
