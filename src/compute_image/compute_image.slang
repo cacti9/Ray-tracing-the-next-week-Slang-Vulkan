@@ -13,14 +13,17 @@ struct UniformBuffer {
   uint samples_per_pixel;
   float defocus_angle;
 };
-ConstantBuffer<UniformBuffer> ubo;
+[[vk::binding(0, 0)]] ConstantBuffer<UniformBuffer> ubo;
 
-RWStructuredBuffer<uint> pixels;
-StructuredBuffer<Hittable> the_world;
-StructuredBuffer<Material> the_world_mat;
-StructuredBuffer<Texture> the_textures;
+[[vk::binding(1, 0)]] RWStructuredBuffer<uint> pixels;
+[[vk::binding(2, 0)]] StructuredBuffer<Hittable> the_world;
+[[vk::binding(3, 0)]] StructuredBuffer<Material> the_world_mat;
+[[vk::binding(4, 0)]] StructuredBuffer<Texture> the_textures;
+[[vk::binding(5, 0)]] Texture2D<float4> image_textures[MAX_IMAGE_TEXTURES];
+[[vk::binding(6, 0)]] SamplerState image_sampler;
 
 color ray_color(inout uint rngState, ray r, uint maxDepth) {
+  TextureContext texture_context = { the_textures, image_textures, image_sampler };
   color throughput = color(1.0);
 
   hit_record rec;
@@ -29,7 +32,7 @@ color ray_color(inout uint rngState, ray r, uint maxDepth) {
   for (uint depth = 0; depth < maxDepth; depth++) {
 
     if (hit(the_world, ubo.hittable_count, r, interval( 0.001, INF ), rec)) {
-      if (the_world_mat[rec.material_index].scatter(the_textures, rngState, r, rec, attenuation, scattered)) {
+      if (the_world_mat[rec.material_index].scatter(texture_context, rngState, r, rec, attenuation, scattered)) {
         throughput *= attenuation;
         r = scattered;
       } else {

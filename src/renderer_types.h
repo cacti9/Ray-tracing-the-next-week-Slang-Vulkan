@@ -25,6 +25,7 @@ import vulkan_hpp;
 constexpr uint32_t WIDTH = 800;
 constexpr uint32_t HEIGHT = 800;
 constexpr int MAX_FRAMES_IN_FLIGHT = 1;
+constexpr uint32_t MAX_IMAGE_TEXTURES = 16;
 
 using precision_type = float;
 constexpr precision_type INF = std::numeric_limits<precision_type>::infinity();

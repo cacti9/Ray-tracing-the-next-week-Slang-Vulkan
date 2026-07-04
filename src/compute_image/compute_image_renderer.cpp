@@ -1,8 +1,52 @@
 #include "compute_image_renderer.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_FAILURE_USERMSG
+#include <stb_image.h>
+
 #include <array>
+#include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+namespace {
+constexpr vk::Format IMAGE_TEXTURE_FORMAT = vk::Format::eR8G8B8A8Srgb;
+constexpr uint32_t IMAGE_TEXTURE_CHANNELS = 4;
+
+struct LoadedImage {
+  int width = 1;
+  int height = 1;
+  std::vector<unsigned char> pixels{0, 255, 255, 255};
+};
+
+std::vector<std::string> imagePathCandidates(const std::string& path) {
+  return {
+    path,
+    "textures/" + path,
+    "../textures/" + path,
+    "../../textures/" + path,
+  };
+}
+
+LoadedImage loadImageTexture(const std::string& path) {
+  for (const auto& candidate : imagePathCandidates(path)) {
+    int width = 0;
+    int height = 0;
+    int channelCount = 0;
+    stbi_uc* data = stbi_load(candidate.c_str(), &width, &height, &channelCount, STBI_rgb_alpha);
+    if (data != nullptr) {
+      const size_t byteCount = static_cast<size_t>(width) * static_cast<size_t>(height) * IMAGE_TEXTURE_CHANNELS;
+      LoadedImage image{.width = width, .height = height, .pixels = std::vector<unsigned char>(data, data + byteCount)};
+      stbi_image_free(data);
+      return image;
+    }
+  }
+
+  std::cerr << "failed to load image texture '" << path << "': " << stbi_failure_reason() << std::endl;
+  return {};
+}
+} // namespace
 
 void ComputeImageRenderer::createDescriptorSetLayout(vk::raii::Device const& device) {
   std::array layoutBindings{
@@ -11,6 +55,10 @@ void ComputeImageRenderer::createDescriptorSetLayout(vk::raii::Device const& dev
     vk::DescriptorSetLayoutBinding{2, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
     vk::DescriptorSetLayoutBinding{3, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
     vk::DescriptorSetLayoutBinding{4, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
+    vk::DescriptorSetLayoutBinding{
+      5, vk::DescriptorType::eSampledImage, MAX_IMAGE_TEXTURES, vk::ShaderStageFlagBits::eCompute, nullptr
+    },
+    vk::DescriptorSetLayoutBinding{6, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
   };
 
   vk::DescriptorSetLayoutCreateInfo layoutInfo{
@@ -44,16 +92,23 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
   for (auto& textureBuffer : textureBuffers) {
     gpuResources.destroyBuffer(textureBuffer);
   }
-  renderExtent = extent;
-  const size_t pixelCount = static_cast<size_t>(renderExtent.width) * static_cast<size_t>(renderExtent.height);
-  pixelBufferSize = sizeof(uint32_t) * pixelCount;
-
+  imageTextureImageViews.clear();
+  for (auto& imageTextureImage : imageTextureImages) {
+    gpuResources.destroyImage(imageTextureImage);
+  }
+  imageTextureImages.clear();
+  imageTextureSampler = nullptr;
   populateWorld();
+  createImageTextures(gpuResources);
 
   pixelBuffers.clear();
   hittableBuffers.clear();
   materialBuffers.clear();
   textureBuffers.clear();
+
+  renderExtent = extent;
+  const size_t pixelCount = static_cast<size_t>(renderExtent.width) * static_cast<size_t>(renderExtent.height);
+  pixelBufferSize = sizeof(uint32_t) * pixelCount;
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vk::Buffer pixelBuffer;
     gpuResources.createDeviceLocalBuffer(
@@ -89,6 +144,33 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
   }
 }
 
+void ComputeImageRenderer::createImageTextures(GpuResources& gpuResources) {
+  if (imageTexturePaths.size() > MAX_IMAGE_TEXTURES) {
+    throw std::runtime_error("too many image textures");
+  }
+
+  imageTextureSampler = gpuResources.createSampler();
+  imageTextureImages.reserve(MAX_IMAGE_TEXTURES);
+  imageTextureImageViews.reserve(MAX_IMAGE_TEXTURES);
+
+  for (uint32_t i = 0; i < MAX_IMAGE_TEXTURES; i++) {
+    LoadedImage image = i < imageTexturePaths.size() ? loadImageTexture(imageTexturePaths[i]) : LoadedImage{};
+    vk::Image textureImage = nullptr;
+    gpuResources.createSampledImage(
+      static_cast<uint32_t>(image.width),
+      static_cast<uint32_t>(image.height),
+      IMAGE_TEXTURE_FORMAT,
+      image.pixels.size(),
+      image.pixels.data(),
+      textureImage
+    );
+    imageTextureImages.push_back(textureImage);
+    imageTextureImageViews.push_back(
+      gpuResources.createImageView(imageTextureImages.back(), IMAGE_TEXTURE_FORMAT, vk::ImageAspectFlagBits::eColor, 1)
+    );
+  }
+}
+
 void ComputeImageRenderer::createDescriptorSets(
   vk::raii::Device const& device, vk::raii::DescriptorPool const& descriptorPool, std::vector<vk::Buffer> const& uniformBuffers
 ) {
@@ -107,6 +189,14 @@ void ComputeImageRenderer::createDescriptorSets(
     vk::DescriptorBufferInfo hittableBufferInfo{hittableBuffers[i], 0, hittableBufferSize};
     vk::DescriptorBufferInfo materialBufferInfo{materialBuffers[i], 0, materialBufferSize};
     vk::DescriptorBufferInfo textureBufferInfo{textureBuffers[i], 0, textureBufferSize};
+    std::array<vk::DescriptorImageInfo, MAX_IMAGE_TEXTURES> imageTextureInfos;
+    for (size_t imageIndex = 0; imageIndex < imageTextureInfos.size(); imageIndex++) {
+      imageTextureInfos[imageIndex] = vk::DescriptorImageInfo{
+        .imageView = *imageTextureImageViews[imageIndex],
+        .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+      };
+    }
+    vk::DescriptorImageInfo imageTextureSamplerInfo{.sampler = *imageTextureSampler};
     std::array descriptorWrites{
       vk::WriteDescriptorSet{
         .dstSet = *descriptorSets[i],
@@ -147,6 +237,22 @@ void ComputeImageRenderer::createDescriptorSets(
         .descriptorCount = 1,
         .descriptorType = vk::DescriptorType::eStorageBuffer,
         .pBufferInfo = &textureBufferInfo,
+      },
+      vk::WriteDescriptorSet{
+        .dstSet = *descriptorSets[i],
+        .dstBinding = 5,
+        .dstArrayElement = 0,
+        .descriptorCount = MAX_IMAGE_TEXTURES,
+        .descriptorType = vk::DescriptorType::eSampledImage,
+        .pImageInfo = imageTextureInfos.data(),
+      },
+      vk::WriteDescriptorSet{
+        .dstSet = *descriptorSets[i],
+        .dstBinding = 6,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eSampler,
+        .pImageInfo = &imageTextureSamplerInfo,
       },
     };
     device.updateDescriptorSets(descriptorWrites, {});

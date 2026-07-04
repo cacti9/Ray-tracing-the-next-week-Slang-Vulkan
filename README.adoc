@@ -35,6 +35,8 @@ From Book 2 implementation, C++ code is added for CPU, because BVH construction 
 
 Instead of each hittable's constructor, there is a builder for it.
 
+Just used Vulkan for texture sampler, instead of uploading pixel SSBO to shader.
+
 == Help
 
 I only tested code on Linux and Nvidia GPU. I would be grateful to know errors on other platforms.

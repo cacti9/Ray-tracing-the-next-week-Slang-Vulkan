@@ -54,6 +54,41 @@ void GpuResources::createImage(
   allocator.createImage(imageInfo, image);
 }
 
+void GpuResources::createSampledImage(
+  uint32_t width, uint32_t height, vk::Format format, VkDeviceSize size, const void* data, vk::Image& image
+) {
+  auto stagingBuffer = allocator.createStagingBuffer(size, data);
+  createImage(
+    width,
+    height,
+    1,
+    vk::SampleCountFlagBits::e1,
+    format,
+    vk::ImageTiling::eOptimal,
+    vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+    image
+  );
+  transitionImageLayout(
+    image,
+    vk::ImageLayout::eUndefined,
+    vk::ImageLayout::eTransferDstOptimal,
+    {},
+    vk::AccessFlagBits2::eTransferWrite,
+    vk::PipelineStageFlagBits2::eTopOfPipe,
+    vk::PipelineStageFlagBits2::eTransfer
+  );
+  copyBufferToImage(stagingBuffer.getBuffer(), image, width, height);
+  transitionImageLayout(
+    image,
+    vk::ImageLayout::eTransferDstOptimal,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
+    vk::AccessFlagBits2::eTransferWrite,
+    vk::AccessFlagBits2::eShaderSampledRead,
+    vk::PipelineStageFlagBits2::eTransfer,
+    vk::PipelineStageFlagBits2::eComputeShader
+  );
+}
+
 vk::raii::ImageView
 GpuResources::createImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags, uint32_t mipLevels) {
   vk::ImageViewCreateInfo viewInfo{
@@ -62,12 +97,69 @@ GpuResources::createImageView(vk::Image& image, vk::Format format, vk::ImageAspe
   return vk::raii::ImageView(device, viewInfo);
 }
 
+vk::raii::Sampler GpuResources::createSampler() {
+  vk::SamplerCreateInfo samplerInfo{
+    .magFilter = vk::Filter::eNearest,
+    .minFilter = vk::Filter::eNearest,
+    .mipmapMode = vk::SamplerMipmapMode::eLinear,
+    .addressModeU = vk::SamplerAddressMode::eClampToEdge,
+    .addressModeV = vk::SamplerAddressMode::eClampToEdge,
+    .addressModeW = vk::SamplerAddressMode::eClampToEdge,
+    .mipLodBias = 0.0f,
+    .anisotropyEnable = vk::False,
+    .maxAnisotropy = 1.0f,
+    .compareEnable = vk::False,
+    .compareOp = vk::CompareOp::eAlways,
+    .minLod = 0.0f,
+    .maxLod = 0.0f,
+    .borderColor = vk::BorderColor::eIntOpaqueBlack,
+    .unnormalizedCoordinates = vk::False,
+  };
+  return vk::raii::Sampler(device, samplerInfo);
+}
+
 void GpuResources::destroyImage(vk::Image& image) { allocator.destroyImage(image); }
 
 void GpuResources::copyBuffer(const vk::Buffer& srcBuffer, const vk::Buffer& dstBuffer, VkDeviceSize size) {
   auto commandCopyBuffer = beginSingleTimeCommands();
   commandCopyBuffer.copyBuffer(srcBuffer, dstBuffer, vk::BufferCopy{0, 0, size});
   endSingleTimeCommands(commandCopyBuffer);
+}
+
+void GpuResources::copyBufferToImage(const vk::Buffer& srcBuffer, vk::Image image, uint32_t width, uint32_t height) {
+  vk::BufferImageCopy copyRegion{
+    .bufferOffset = 0,
+    .bufferRowLength = 0,
+    .bufferImageHeight = 0,
+    .imageSubresource = {.aspectMask = vk::ImageAspectFlagBits::eColor, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1},
+    .imageOffset = {0, 0, 0},
+    .imageExtent = {width, height, 1},
+  };
+  auto commandCopyBuffer = beginSingleTimeCommands();
+  commandCopyBuffer.copyBufferToImage(srcBuffer, image, vk::ImageLayout::eTransferDstOptimal, copyRegion);
+  endSingleTimeCommands(commandCopyBuffer);
+}
+
+void GpuResources::transitionImageLayout(
+  vk::Image image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, vk::AccessFlags2 srcAccessMask,
+  vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::PipelineStageFlags2 dstStageMask
+) {
+  vk::ImageMemoryBarrier2 barrier{
+    .srcStageMask = srcStageMask,
+    .srcAccessMask = srcAccessMask,
+    .dstStageMask = dstStageMask,
+    .dstAccessMask = dstAccessMask,
+    .oldLayout = oldLayout,
+    .newLayout = newLayout,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = image,
+    .subresourceRange = {.aspectMask = vk::ImageAspectFlagBits::eColor, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1}
+  };
+  vk::DependencyInfo dependencyInfo{.imageMemoryBarrierCount = 1, .pImageMemoryBarriers = &barrier};
+  auto commandBarrier = beginSingleTimeCommands();
+  commandBarrier.pipelineBarrier2(dependencyInfo);
+  endSingleTimeCommands(commandBarrier);
 }
 
 vk::raii::CommandBuffer GpuResources::beginSingleTimeCommands() {

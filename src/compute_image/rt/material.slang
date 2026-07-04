@@ -1,7 +1,14 @@
 implementing rt;
 
 internal interface material {
-  bool scatter(StructuredBuffer<Texture> textures, inout uint rngState, const ray r_in, const hit_record rec, out color attenuation, inout ray scattered);
+  bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  );
 }
 
 public enum MaterialType {
@@ -15,17 +22,24 @@ public struct Material : material {
   public MaterialType type; // 32bit
   public uint[MATERIAL_DATA_SIZE] data;
 
-  public bool scatter(StructuredBuffer<Texture> textures, inout uint rngState, const ray r_in, const hit_record rec, out color attenuation, inout ray scattered) {
+  public bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  ) {
     switch (type) {
     case MaterialType::Lambertian:
       Lambertian l= reinterpret<Lambertian>(data);
-      return l.scatter(textures, rngState, r_in, rec, attenuation, scattered);
+      return l.scatter(texture_context, rngState, r_in, rec, attenuation, scattered);
     case MaterialType::Metal:
       Metal m = reinterpret<Metal>(data);
-      return m.scatter(textures, rngState, r_in, rec, attenuation, scattered);
+      return m.scatter(texture_context, rngState, r_in, rec, attenuation, scattered);
     case MaterialType::Dielectric:
       Dielectric d = reinterpret<Dielectric>(data);
-      return d.scatter(textures, rngState, r_in, rec, attenuation, scattered);
+      return d.scatter(texture_context, rngState, r_in, rec, attenuation, scattered);
     default:
       attenuation = {0.}; // idk
       return false; // idk
@@ -36,7 +50,14 @@ public struct Material : material {
 public struct Lambertian : material {
   public uint texture_index;
 
-  bool scatter(StructuredBuffer<Texture> textures, inout uint rngState, const ray r_in, const hit_record rec, out color attenuation, inout ray scattered) {
+  bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  ) {
     vec3 scatter_direction;
     scatter_direction = rec.normal + random_unit_vector(rngState);
 
@@ -44,7 +65,7 @@ public struct Lambertian : material {
       scatter_direction = rec.normal;
 
     scattered = ray(rec.p, scatter_direction, r_in.tm);
-    attenuation = texture_value(textures, texture_index, rec.u, rec.v, rec.p);
+    attenuation = texture_value(texture_context, texture_index, rec.u, rec.v, rec.p);
     return true;
   }
 }
@@ -53,7 +74,14 @@ public struct Metal : material {
   public color albedo;
   public precision_type fuzz;
 
-  bool scatter(StructuredBuffer<Texture> textures, inout uint rngState, const ray r_in, const hit_record rec, out color attenuation, inout ray scattered) {
+  bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  ) {
     vec3 reflected = reflect(r_in.dir, rec.normal);
     reflected = normalize(reflected) + (fuzz * random_unit_vector(rngState));
     scattered = ray(rec.p, reflected, r_in.tm);
@@ -65,7 +93,14 @@ public struct Metal : material {
 public struct Dielectric : material {
   public precision_type refraction_index;
 
-  bool scatter(StructuredBuffer<Texture> textures, inout uint rngState, const ray r_in, const hit_record rec, out color attenuation, inout ray scattered) {
+  bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  ) {
     attenuation = color(1.0, 1.0, 1.0);
     precision_type ri = rec.front_face ? (1.0/refraction_index) : refraction_index;
 

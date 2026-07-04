@@ -150,12 +150,14 @@ void VulkanRenderer::pickPhysicalDevice() {
     auto features = device.template getFeatures2<
       vk::PhysicalDeviceFeatures2,
       vk::PhysicalDeviceVulkan11Features,
+      vk::PhysicalDeviceVulkan12Features,
       vk::PhysicalDeviceVulkan13Features,
       vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
       vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>();
     bool supportsRequiredFeatures =
       features.template get<vk::PhysicalDeviceFeatures2>().features.shaderFloat64 &&
       features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
+      features.template get<vk::PhysicalDeviceVulkan12Features>().shaderSampledImageArrayNonUniformIndexing &&
       features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
       features.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState &&
       features.template get<vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>().timelineSemaphore;
@@ -210,6 +212,7 @@ void VulkanRenderer::createLogicalDevice() {
   vk::StructureChain<
     vk::PhysicalDeviceFeatures2,
     vk::PhysicalDeviceVulkan11Features,
+    vk::PhysicalDeviceVulkan12Features,
     vk::PhysicalDeviceVulkan13Features,
     vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
     vk::PhysicalDeviceMaintenance5Features,
@@ -221,6 +224,8 @@ void VulkanRenderer::createLogicalDevice() {
       {.features = {.shaderFloat64 = true}},
       // vk::PhysicalDeviceVulkan11Features
       {.shaderDrawParameters = true},
+      // vk::PhysicalDeviceVulkan12Features
+      {.shaderSampledImageArrayNonUniformIndexing = true},
       // vk::PhysicalDeviceVulkan13Features
       {.synchronization2 = true,
        .dynamicRendering = true,
@@ -353,6 +358,8 @@ void VulkanRenderer::createDescriptorPool() {
   std::array poolSize{
     vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, descriptorSetCount},
     vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 4},
+    vk::DescriptorPoolSize{vk::DescriptorType::eSampledImage, descriptorSetCount * MAX_IMAGE_TEXTURES},
+    vk::DescriptorPoolSize{vk::DescriptorType::eSampler, descriptorSetCount},
   };
   vk::DescriptorPoolCreateInfo poolInfo{
     .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,

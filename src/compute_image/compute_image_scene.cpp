@@ -76,21 +76,40 @@ void checkered_spheres(RtCpuBuilder& builder, CameraSettings& camera) {
   builder.addStaticSphere({0, -10, 0}, 10, checkerMaterial);
   builder.addStaticSphere({0, 10, 0}, 10, checkerMaterial);
 }
+
+void earth(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {0, 0, 12},
+    .look_at = {0, 0, 0},
+    .vup = {0, 1, 0},
+    .vfov = 20.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t earthTexture = builder.addImageTexture("earthmap.jpg");
+  const uint32_t earthSurface = builder.addLambertian(earthTexture);
+  builder.addStaticSphere({0, 0, 0}, 2, earthSurface);
+}
 } // namespace
 
 void ComputeImageRenderer::populateWorld() {
   hittablesData.clear();
   materialsData.clear();
   texturesData.clear();
+  imageTexturePaths.clear();
 
-  RtCpuBuilder builder(hittablesData, materialsData, texturesData);
+  RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths);
 
-  switch (2) {
+  switch (3) {
   case 1:
     bouncing_spheres(builder, cameraSettings);
     break;
   case 2:
     checkered_spheres(builder, cameraSettings);
+    break;
+  case 3:
+    earth(builder, cameraSettings);
     break;
   }
 

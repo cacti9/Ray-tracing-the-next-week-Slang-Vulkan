@@ -113,7 +113,7 @@ function (add_slang_shader_target TARGET)
 endfunction()
 
 function (add_app APP_NAME)
-  cmake_parse_arguments (APP "" "" "SHADERS;LIBS" ${ARGN})
+  cmake_parse_arguments (APP "" "" "SHADERS;LIBS;TEXTURES" ${ARGN})
   file(GLOB_RECURSE ALL_SOURCES CONFIGURE_DEPENDS "src/*.cpp" "src/*.h" "src/*.hpp")
   add_executable (${APP_NAME} ${ALL_SOURCES})
   target_compile_definitions(${APP_NAME}
@@ -171,8 +171,13 @@ function (add_app APP_NAME)
   if (DEFINED APP_LIBS)
     target_link_libraries (${APP_NAME} ${APP_LIBS})
   endif ()
+  if (DEFINED APP_TEXTURES)
+    list(TRANSFORM APP_TEXTURES PREPEND "${CMAKE_SOURCE_DIR}/assets/")
+    file (COPY ${APP_TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/${APP_NAME}/textures)
+  endif ()
 endfunction ()
 
 add_app (app1
   SHADERS compute_image/compute_image
+  TEXTURES earthmap.jpg
   LIBS glm::glm vma_raii)

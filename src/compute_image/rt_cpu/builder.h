@@ -9,16 +9,22 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 struct RtCpuBuilder {
   std::vector<Hittable>& hittables;
   std::vector<Material>& materials;
   std::vector<Texture>& textures;
+  std::vector<std::string>& imageTexturePaths;
 
-  RtCpuBuilder(std::vector<Hittable>& hittables_, std::vector<Material>& materials_, std::vector<Texture>& textures_)
-      : hittables(hittables_), materials(materials_), textures(textures_) {}
+  RtCpuBuilder(
+    std::vector<Hittable>& hittables_, std::vector<Material>& materials_, std::vector<Texture>& textures_,
+    std::vector<std::string>& imageTexturePaths_
+  )
+      : hittables(hittables_), materials(materials_), textures(textures_), imageTexturePaths(imageTexturePaths_) {}
 
   uint32_t addLambertian(glm::vec<3, precision_type> albedo) { return addLambertian(addSolidColor(albedo)); }
 
@@ -63,6 +69,11 @@ struct RtCpuBuilder {
 
   uint32_t addCheckerTexture(precision_type scale, glm::vec<3, precision_type> even, glm::vec<3, precision_type> odd) {
     return addCheckerTexture(scale, addSolidColor(even), addSolidColor(odd));
+  }
+
+  uint32_t addImageTexture(std::string path) {
+    imageTexturePaths.push_back(std::move(path));
+    return addTexture(TextureType::Image, ImageTexture{.image_index = static_cast<uint32_t>(imageTexturePaths.size() - 1)});
   }
 
 private:

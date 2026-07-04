@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "gpu_resources.h"
@@ -22,6 +23,10 @@ struct ComputeImageRenderer {
   std::vector<vk::Buffer> textureBuffers;
   std::vector<Texture> texturesData;
   vk::DeviceSize textureBufferSize = 0;
+  std::vector<std::string> imageTexturePaths;
+  std::vector<vk::Image> imageTextureImages;
+  std::vector<vk::raii::ImageView> imageTextureImageViews;
+  vk::raii::Sampler imageTextureSampler = nullptr;
   CameraSettings cameraSettings;
   vk::Extent2D renderExtent{};
 
@@ -29,6 +34,7 @@ struct ComputeImageRenderer {
   void createComputePipeline(vk::raii::Device const& device);
   void populateWorld();
   void createBuffers(GpuResources& gpuResources, vk::Extent2D const& extent);
+  void createImageTextures(GpuResources& gpuResources);
   void createDescriptorSets(
     vk::raii::Device const& device, vk::raii::DescriptorPool const& descriptorPool, std::vector<vk::Buffer> const& uniformBuffers
   );
