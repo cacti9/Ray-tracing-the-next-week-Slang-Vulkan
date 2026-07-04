@@ -2,6 +2,7 @@
 
 #include "hittable.h"
 #include "material.h"
+#include "renderer_types.h"
 #include "texture.h"
 
 #include <algorithm>
@@ -9,22 +10,66 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <glm/gtx/hash.hpp>
+#include <random>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+struct PerlinBuilder {
+  static Perlin build(uint32_t seedOffset = 0) {
+    Perlin perlin{};
+    std::mt19937 randomEngine{1 + seedOffset};
+    std::uniform_real_distribution<precision_type> unitDistribution{-1.0, 1.0};
+
+    for (uint32_t i = 0; i < PERLIN_POINT_COUNT; i++) {
+      glm::vec<3, precision_type> temp = {
+        unitDistribution(randomEngine), unitDistribution(randomEngine), unitDistribution(randomEngine)
+      };
+      temp = glm::normalize(temp);
+      perlin.randvec_unpacked[3 * i] = temp.x;
+      perlin.randvec_unpacked[3 * i + 1] = temp.y;
+      perlin.randvec_unpacked[3 * i + 2] = temp.z;
+    }
+
+    generatePerm(perlin.perm_x, randomEngine);
+    generatePerm(perlin.perm_y, randomEngine);
+    generatePerm(perlin.perm_z, randomEngine);
+
+    return perlin;
+  }
+
+private:
+  static void generatePerm(std::array<uint32_t, PERLIN_POINT_COUNT>& p, std::mt19937& randomEngine) {
+    for (uint32_t i = 0; i < PERLIN_POINT_COUNT; i++) {
+      p[i] = i;
+    }
+    permute(p, randomEngine);
+  }
+
+  static void permute(std::array<uint32_t, PERLIN_POINT_COUNT>& p, std::mt19937& randomEngine) {
+    for (uint32_t i = PERLIN_POINT_COUNT - 1; i > 0; i--) {
+      std::uniform_int_distribution<uint32_t> targetDistribution{0, i};
+      const uint32_t target = targetDistribution(randomEngine);
+      std::swap(p[i], p[target]);
+    }
+  }
+};
 
 struct RtCpuBuilder {
   std::vector<Hittable>& hittables;
   std::vector<Material>& materials;
   std::vector<Texture>& textures;
   std::vector<std::string>& imageTexturePaths;
+  std::vector<Perlin>& perlins;
 
   RtCpuBuilder(
     std::vector<Hittable>& hittables_, std::vector<Material>& materials_, std::vector<Texture>& textures_,
-    std::vector<std::string>& imageTexturePaths_
+    std::vector<std::string>& imageTexturePaths_, std::vector<Perlin>& perlins_
   )
-      : hittables(hittables_), materials(materials_), textures(textures_), imageTexturePaths(imageTexturePaths_) {}
+      : hittables(hittables_), materials(materials_), textures(textures_), imageTexturePaths(imageTexturePaths_),
+        perlins(perlins_) {}
 
   uint32_t addLambertian(glm::vec<3, precision_type> albedo) { return addLambertian(addSolidColor(albedo)); }
 
@@ -74,6 +119,13 @@ struct RtCpuBuilder {
   uint32_t addImageTexture(std::string path) {
     imageTexturePaths.push_back(std::move(path));
     return addTexture(TextureType::Image, ImageTexture{.image_index = static_cast<uint32_t>(imageTexturePaths.size() - 1)});
+  }
+
+  uint32_t addNoiseTexture(precision_type scale) {
+    if (perlins.empty()) {
+      perlins.push_back(PerlinBuilder::build());
+    }
+    return addTexture(TextureType::Noise, NoiseTexture{.scale = scale});
   }
 
 private:

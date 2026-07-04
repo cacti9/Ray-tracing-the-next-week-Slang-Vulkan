@@ -28,7 +28,7 @@ public enum HittableType {
   Sphere,
 };
 
-public static const uint HITTABLE_DATA_SIZE = 16;
+public static const uint HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 20 : 16;
 public struct Hittable {
   public HittableType type;
   public aabb bbox;
@@ -36,11 +36,11 @@ public struct Hittable {
 };
 
 public void get_sphere_uv(const point3 p, out precision_type u, out precision_type v) {
-  precision_type theta = acos(-p.y);
-  precision_type phi = atan2(-p.z, p.x) + PI;
+  float theta = acos(float(-p.y));
+  float phi = atan2(float(-p.z), float(p.x)) + float(PI);
 
-  u = phi / (2.0 * PI);
-  v = theta / PI;
+  u = precision_type(phi / (2.0f * float(PI)));
+  v = precision_type(theta / float(PI));
 }
 
 public struct Sphere : hittable {

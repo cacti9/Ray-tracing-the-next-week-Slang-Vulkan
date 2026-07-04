@@ -21,9 +21,10 @@ struct UniformBuffer {
 [[vk::binding(4, 0)]] StructuredBuffer<Texture> the_textures;
 [[vk::binding(5, 0)]] Texture2D<float4> image_textures[MAX_IMAGE_TEXTURES];
 [[vk::binding(6, 0)]] SamplerState image_sampler;
+[[vk::binding(7, 0)]] StructuredBuffer<Perlin> the_perlins;
 
 color ray_color(inout uint rngState, ray r, uint maxDepth) {
-  TextureContext texture_context = { the_textures, image_textures, image_sampler };
+  TextureContext texture_context = { the_textures, image_textures, image_sampler, the_perlins };
   color throughput = color(1.0);
 
   hit_record rec;

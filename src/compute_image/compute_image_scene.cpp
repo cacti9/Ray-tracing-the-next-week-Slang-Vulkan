@@ -91,17 +91,35 @@ void earth(RtCpuBuilder& builder, CameraSettings& camera) {
   const uint32_t earthSurface = builder.addLambertian(earthTexture);
   builder.addStaticSphere({0, 0, 0}, 2, earthSurface);
 }
+
+void perlin_spheres(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {13, 2, 3},
+    .look_at = {0, 0, 0},
+    .vup = {0, 1, 0},
+    .vfov = 20.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t perlinTexture = builder.addNoiseTexture(4);
+  const uint32_t perlinMaterial = builder.addLambertian(perlinTexture);
+
+  builder.addStaticSphere({0, -1000, 0}, 1000, perlinMaterial);
+  builder.addStaticSphere({0, 2, 0}, 2, perlinMaterial);
+}
 } // namespace
 
 void ComputeImageRenderer::populateWorld() {
   hittablesData.clear();
   materialsData.clear();
   texturesData.clear();
+  perlinsData.clear();
   imageTexturePaths.clear();
 
-  RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths);
+  RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData);
 
-  switch (3) {
+  switch (4) {
   case 1:
     bouncing_spheres(builder, cameraSettings);
     break;
@@ -111,6 +129,9 @@ void ComputeImageRenderer::populateWorld() {
   case 3:
     earth(builder, cameraSettings);
     break;
+  case 4:
+    perlin_spheres(builder, cameraSettings);
+    break;
   }
 
   BvhBuilder(hittablesData).build();
@@ -118,4 +139,5 @@ void ComputeImageRenderer::populateWorld() {
   hittableBufferSize = sizeof(Hittable) * hittablesData.size();
   materialBufferSize = sizeof(Material) * materialsData.size();
   textureBufferSize = sizeof(Texture) * texturesData.size();
+  perlinBufferSize = sizeof(Perlin) * perlinsData.size();
 }

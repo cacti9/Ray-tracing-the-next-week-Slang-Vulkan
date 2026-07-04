@@ -5,6 +5,11 @@
       "name": "ninja",
       "inherits": "vcpkg",
       "generator": "Ninja"
+    },
+    {
+      "name": "ninja-double",
+      "inherits": "vcpkg-double",
+      "generator": "Ninja"
     }
   ]
 }

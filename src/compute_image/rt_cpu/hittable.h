@@ -11,7 +11,7 @@ enum class HittableType : uint32_t {
   Sphere,
 };
 
-constexpr uint32_t HITTABLE_DATA_SIZE = 16;
+constexpr uint32_t HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 20 : 16;
 constexpr uint32_t HITTABLE_DATA_BYTES = HITTABLE_DATA_SIZE * sizeof(uint32_t);
 
 struct Hittable {

@@ -27,7 +27,17 @@ constexpr uint32_t HEIGHT = 800;
 constexpr int MAX_FRAMES_IN_FLIGHT = 1;
 constexpr uint32_t MAX_IMAGE_TEXTURES = 16;
 
+#ifndef RT_USE_DOUBLE_PRECISION
+#define RT_USE_DOUBLE_PRECISION 0
+#endif
+
+#if RT_USE_DOUBLE_PRECISION
+using precision_type = double;
+#else
 using precision_type = float;
+#endif
+
+constexpr bool RT_PRECISION_IS_DOUBLE = RT_USE_DOUBLE_PRECISION != 0;
 constexpr precision_type INF = std::numeric_limits<precision_type>::infinity();
 
 struct UniformBufferObject {

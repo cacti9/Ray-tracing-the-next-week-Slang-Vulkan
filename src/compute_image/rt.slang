@@ -1,6 +1,16 @@
 module rt;
 
+#ifndef RT_USE_DOUBLE_PRECISION
+#define RT_USE_DOUBLE_PRECISION 0
+#endif
+
+#if RT_USE_DOUBLE_PRECISION
+public typealias precision_type = double;
+public static const bool RT_PRECISION_IS_DOUBLE = true;
+#else
 public typealias precision_type = float;
+public static const bool RT_PRECISION_IS_DOUBLE = false;
+#endif
 public typealias precision_type3 = vector<precision_type,3>;
 public typealias precision_type4 = vector<precision_type,4>;
 

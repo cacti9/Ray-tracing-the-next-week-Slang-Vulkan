@@ -23,6 +23,9 @@ struct ComputeImageRenderer {
   std::vector<vk::Buffer> textureBuffers;
   std::vector<Texture> texturesData;
   vk::DeviceSize textureBufferSize = 0;
+  std::vector<vk::Buffer> perlinBuffers;
+  std::vector<Perlin> perlinsData;
+  vk::DeviceSize perlinBufferSize = 0;
   std::vector<std::string> imageTexturePaths;
   std::vector<vk::Image> imageTextureImages;
   std::vector<vk::raii::ImageView> imageTextureImageViews;

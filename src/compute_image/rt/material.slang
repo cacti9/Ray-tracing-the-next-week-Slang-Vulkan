@@ -17,7 +17,7 @@ public enum MaterialType {
   Dielectric,
 };
 
-public static const uint MATERIAL_DATA_SIZE = 8;
+public static const uint MATERIAL_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 8 : 4;
 public struct Material : material {
   public MaterialType type; // 32bit
   public uint[MATERIAL_DATA_SIZE] data;
@@ -124,6 +124,8 @@ public struct Dielectric : material {
     // Use Schlick's approximation for reflectance.
     precision_type r0 = (1 - refraction_index) / (1 + refraction_index);
     r0 = r0*r0;
-    return r0 + (1-r0)*pow((1 - cosine),5);
+    precision_type x = 1 - cosine;
+    precision_type x2 = x * x;
+    return r0 + (1-r0) * x2 * x2 * x;
   }
 }

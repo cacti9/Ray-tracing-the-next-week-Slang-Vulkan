@@ -13,7 +13,7 @@ enum class MaterialType : uint32_t {
   Dielectric,
 };
 
-constexpr uint32_t MATERIAL_DATA_SIZE = 8;
+constexpr uint32_t MATERIAL_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 8 : 4;
 constexpr uint32_t MATERIAL_DATA_BYTES = MATERIAL_DATA_SIZE * sizeof(uint32_t);
 
 struct Material {

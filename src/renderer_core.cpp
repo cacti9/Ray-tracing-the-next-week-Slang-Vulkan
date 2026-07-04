@@ -155,7 +155,7 @@ void VulkanRenderer::pickPhysicalDevice() {
       vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
       vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>();
     bool supportsRequiredFeatures =
-      features.template get<vk::PhysicalDeviceFeatures2>().features.shaderFloat64 &&
+      (!RT_PRECISION_IS_DOUBLE || features.template get<vk::PhysicalDeviceFeatures2>().features.shaderFloat64) &&
       features.template get<vk::PhysicalDeviceVulkan11Features>().shaderDrawParameters &&
       features.template get<vk::PhysicalDeviceVulkan12Features>().shaderSampledImageArrayNonUniformIndexing &&
       features.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
@@ -221,7 +221,7 @@ void VulkanRenderer::createLogicalDevice() {
     vk::PhysicalDeviceTimelineSemaphoreFeaturesKHR>
     featureChain = {
       // vk::PhysicalDeviceFeatures2
-      {.features = {.shaderFloat64 = true}},
+      {.features = {.shaderFloat64 = RT_PRECISION_IS_DOUBLE}},
       // vk::PhysicalDeviceVulkan11Features
       {.shaderDrawParameters = true},
       // vk::PhysicalDeviceVulkan12Features
@@ -357,7 +357,7 @@ void VulkanRenderer::createDescriptorPool() {
   const uint32_t descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
   std::array poolSize{
     vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, descriptorSetCount},
-    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 4},
+    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 5},
     vk::DescriptorPoolSize{vk::DescriptorType::eSampledImage, descriptorSetCount * MAX_IMAGE_TEXTURES},
     vk::DescriptorPoolSize{vk::DescriptorType::eSampler, descriptorSetCount},
   };

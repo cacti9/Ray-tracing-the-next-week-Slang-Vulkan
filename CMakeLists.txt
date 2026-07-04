@@ -6,6 +6,13 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake")
 
 # Add option to enable/disable C++ 20 module
 option(ENABLE_CPP20_MODULE "Enable C++ 20 module support for Vulkan" OFF)
+option(RT_USE_DOUBLE_PRECISION "Use double precision for ray tracing math" OFF)
+
+if(RT_USE_DOUBLE_PRECISION)
+  set(RT_PRECISION_DEFINE RT_USE_DOUBLE_PRECISION=1)
+else()
+  set(RT_PRECISION_DEFINE RT_USE_DOUBLE_PRECISION=0)
+endif()
 
 # Enable C++ module dependency scanning only if C++ 20 module is enabled
 if(ENABLE_CPP20_MODULE)
@@ -101,7 +108,7 @@ function (add_slang_shader_target TARGET)
 
     add_custom_command (
             OUTPUT  ${SPV_OUTPUT_FULLPATH}
-            COMMAND ${SLANGC_EXECUTABLE} ${SHADER_SOURCE} -target spirv -profile spirv_1_4+spvRayQueryKHR -emit-spirv-directly -fvk-use-entrypoint-name ${ENTRY_POINTS} -o ${SPV_OUTPUT_FILENAME}
+            COMMAND ${SLANGC_EXECUTABLE} ${SHADER_SOURCE} -D${RT_PRECISION_DEFINE} -target spirv -profile spirv_1_4+spvRayQueryKHR -emit-spirv-directly -fvk-use-entrypoint-name ${ENTRY_POINTS} -o ${SPV_OUTPUT_FILENAME}
             WORKING_DIRECTORY ${SHADERS_DIR}
             DEPENDS ${SHADER_SOURCE} ${SLANG_MODULE_DEPS} ${SHADERS_DIR}
             COMMENT "Compiling Slang Shader: ${SHADER_SOURCE}"
@@ -120,6 +127,7 @@ function (add_app APP_NAME)
   PRIVATE
     SHADER_DIR="${CMAKE_BINARY_DIR}/${APP_NAME}/shaders"
     APP_NAME="${APP_NAME}"
+    ${RT_PRECISION_DEFINE}
   )
   set_target_properties (${APP_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${APP_NAME})
