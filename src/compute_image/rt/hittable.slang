@@ -149,7 +149,7 @@ internal struct Transform {
     return transform;
   }
 
-  internal static void applyToHitRecord(const Transform local_to_world, inout hit_record rec, const ray world_ray) {
+  internal static void apply_to_hit_record(const Transform local_to_world, inout hit_record rec, const ray world_ray) {
     vec3 outward_normal = rec.front_face ? rec.normal : -rec.normal;
     rec.p = local_to_world.offset + mul(local_to_world.basis,rec.p);
     outward_normal = normalize(mul(local_to_world.basis, outward_normal));
@@ -161,14 +161,14 @@ public struct Translate {
   public uint hittable_index;
   public vec3 offset;
 
-  internal static Transform composeTranslate(const Transform parent, const vec3 offset) {
+  internal static Transform compose_translate(const Transform parent, const vec3 offset) {
     Transform transform = parent;
     transform.offset = parent.offset + mul(parent.basis, offset);
     return transform;
   }
 
 
-  internal static ray inverseTranslateRay(const ray r, const vec3 offset) {
+  internal static ray inverse_translate_ray(const ray r, const vec3 offset) {
     ray transformed;
     transformed.orig = r.orig - offset;
     transformed.dir = r.dir;
@@ -182,7 +182,7 @@ public struct RotateY {
   public precision_type sin_theta;
   public precision_type cos_theta;
 
-  internal static Transform composeRotateY(const Transform parent, precision_type sin_theta, precision_type cos_theta) {
+  internal static Transform compose_rotate_y(const Transform parent, precision_type sin_theta, precision_type cos_theta) {
     Transform transform;
     matrix<precision_type, 3, 3> rotate_y = {
       { cos_theta, 0, sin_theta },
@@ -194,7 +194,7 @@ public struct RotateY {
     return transform;
   }
 
-  internal static ray inverseRotateYRay(const ray r, precision_type sin_theta, precision_type cos_theta) {
+  internal static ray inverse_rotate_y_ray(const ray r, precision_type sin_theta, precision_type cos_theta) {
     matrix<precision_type, 3, 3> inverse_rotate_y = {
       { cos_theta, 0, -sin_theta },
       { 0, 1, 0 },
@@ -278,8 +278,8 @@ public bool hit(
       if (stack_size < 64) {
         Translate translate = reinterpret<Translate>(world[hittable_index].data);
         entry.hittable_index = translate.hittable_index;
-        entry.local_ray = Translate::inverseTranslateRay(entry.local_ray, translate.offset);
-        entry.local_to_world = Translate::composeTranslate(entry.local_to_world, translate.offset);
+        entry.local_ray = Translate::inverse_translate_ray(entry.local_ray, translate.offset);
+        entry.local_to_world = Translate::compose_translate(entry.local_to_world, translate.offset);
         stack[stack_size++] = entry;
       }
       break;
@@ -287,8 +287,8 @@ public bool hit(
       if (stack_size < 64) {
         RotateY rotate = reinterpret<RotateY>(world[hittable_index].data);
         entry.hittable_index = rotate.hittable_index;
-        entry.local_ray = RotateY::inverseRotateYRay(entry.local_ray, rotate.sin_theta, rotate.cos_theta);
-        entry.local_to_world = RotateY::composeRotateY(entry.local_to_world, rotate.sin_theta, rotate.cos_theta);
+        entry.local_ray = RotateY::inverse_rotate_y_ray(entry.local_ray, rotate.sin_theta, rotate.cos_theta);
+        entry.local_to_world = RotateY::compose_rotate_y(entry.local_to_world, rotate.sin_theta, rotate.cos_theta);
         stack[stack_size++] = entry;
       }
       break;
@@ -347,7 +347,7 @@ public bool hit(
       break;
     }
     if (hit_on_primitive) {
-      Transform::applyToHitRecord(entry.local_to_world, primitive_hit_rec, r);
+      Transform::apply_to_hit_record(entry.local_to_world, primitive_hit_rec, r);
       hit_anything = true;
       closest_so_far = primitive_hit_rec.t;
       rec = primitive_hit_rec;

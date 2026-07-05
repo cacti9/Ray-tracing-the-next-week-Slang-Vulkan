@@ -61,7 +61,7 @@ public struct Perlin {
       }
     }
 
-    return perlinInterp(c, u, v, w);
+    return perlin_interp(c, u, v, w);
   }
   precision_type turb(const point3 p, int depth) {
     precision_type accum = 0.0;
@@ -77,7 +77,7 @@ public struct Perlin {
     return abs(accum);
   }
 
-  static precision_type perlinInterp(vec3 c[2][2][2], precision_type u, precision_type v, precision_type w) {
+  static precision_type perlin_interp(vec3 c[2][2][2], precision_type u, precision_type v, precision_type w) {
     precision_type uu = u*u*(3-2*u);
     precision_type vv = v*v*(3-2*v);
     precision_type ww = w*w*(3-2*w);

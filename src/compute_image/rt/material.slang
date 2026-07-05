@@ -79,7 +79,7 @@ public struct Lambertian : material {
     vec3 scatter_direction;
     scatter_direction = rec.normal + random_unit_vector(rngState);
 
-    if (nearZero(scatter_direction))
+    if (near_zero(scatter_direction))
       scatter_direction = rec.normal;
 
     scattered = ray(rec.p, scatter_direction, r_in.tm);

@@ -72,7 +72,7 @@ public struct ConstantMedium {
         if (stack_size < 64) {
           Translate translate = reinterpret<Translate>(world[hittable_index].data);
           entry.hittable_index = translate.hittable_index;
-          entry.local_ray = Translate::inverseTranslateRay(entry.local_ray, translate.offset);
+          entry.local_ray = Translate::inverse_translate_ray(entry.local_ray, translate.offset);
           stack[stack_size++] = entry;
         }
         break;
@@ -80,7 +80,7 @@ public struct ConstantMedium {
         if (stack_size < 64) {
           RotateY rotate = reinterpret<RotateY>(world[hittable_index].data);
           entry.hittable_index = rotate.hittable_index;
-          entry.local_ray = RotateY::inverseRotateYRay(entry.local_ray, rotate.sin_theta, rotate.cos_theta);
+          entry.local_ray = RotateY::inverse_rotate_y_ray(entry.local_ray, rotate.sin_theta, rotate.cos_theta);
           stack[stack_size++] = entry;
         }
         break;

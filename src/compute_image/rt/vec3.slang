@@ -52,7 +52,7 @@ public vec3 random_on_hemisphere(inout uint rngState, const vec3 normal) {
     return -on_unit_sphere;
 }
 
-public bool nearZero(precision_type3 v) {
+public bool near_zero(precision_type3 v) {
     const precision_type s = 1e-8;
     return all(abs(v) < s);
 }
