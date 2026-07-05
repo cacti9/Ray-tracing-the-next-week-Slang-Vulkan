@@ -16,12 +16,16 @@ cmake --preset ninja
 cmake --build build
 ----
 
+or to use double on shader,
+[source]
+----
+cmake --preset ninja-double
+cmake --build build
+----
+
 executable under build/app1
 
 == Design Choices
-
-It is possible to use double precision by chaning `precision_type` on "renderer_types.h" and "compute_image/rt.slang". 
-Default is `float`.
 
 Creating the hittable list is too expensive on shader; cpu creates and uploads with SSBO.
 The related code is in `populateWorld()` and `createBuffers()`.
