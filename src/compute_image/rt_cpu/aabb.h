@@ -53,3 +53,11 @@ private:
       z = z.expand(delta);
   }
 };
+
+inline Aabb operator+(const Aabb& bbox, const glm::vec<3, precision_type>& offset) {
+  return {bbox.x + offset.x, bbox.y + offset.y, bbox.z + offset.z};
+}
+
+inline Aabb operator+(const glm::vec<3, precision_type>& offset, const Aabb& bbox) {
+  return bbox + offset;
+}

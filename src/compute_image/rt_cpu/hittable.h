@@ -10,6 +10,9 @@ enum class HittableType : uint32_t {
   BvhNode = 0,
   Sphere,
   Quad,
+  HittableList,
+  Translate,
+  RotateY,
 };
 
 constexpr uint32_t HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 40 : 24;
@@ -48,4 +51,20 @@ struct BvhNode {
   static bool box_compare(const Aabb& a, const Aabb& b, int axis_index) {
     return a.axis_interval(axis_index).min < b.axis_interval(axis_index).min;
   }
+};
+
+struct HittableList {
+  uint32_t first;
+  uint32_t count;
+};
+
+struct Translate {
+  uint32_t hittable_index;
+  glm::vec<3, precision_type> offset;
+};
+
+struct RotateY {
+  uint32_t hittable_index;
+  precision_type sin_theta;
+  precision_type cos_theta;
 };

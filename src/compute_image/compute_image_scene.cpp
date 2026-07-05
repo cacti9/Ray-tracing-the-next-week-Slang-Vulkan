@@ -176,6 +176,8 @@ void cornell_box(RtCpuBuilder& builder, CameraSettings& camera) {
   builder.addQuad({0, 0, 0}, {555, 0, 0}, {0, 0, 555}, white);
   builder.addQuad({555, 555, 555}, {-555, 0, 0}, {0, 0, -555}, white);
   builder.addQuad({0, 0, 555}, {555, 0, 0}, {0, 555, 0}, white);
+  builder.addBox({0, 0, 0}, {165, 330, 165}, 15, {265, 0, 295}, white);
+  builder.addBox({0, 0, 0}, {165, 165, 165}, -18, {130, 0, 65}, white);
 }
 } // namespace
 
@@ -185,8 +187,9 @@ void ComputeImageRenderer::populateWorld() {
   texturesData.clear();
   perlinsData.clear();
   imageTexturePaths.clear();
+  std::vector<uint32_t> rootHittables;
 
-  RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData);
+  RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData, rootHittables);
 
   switch (7) {
   case 1:
@@ -212,7 +215,7 @@ void ComputeImageRenderer::populateWorld() {
     break;
   }
 
-  BvhBuilder(hittablesData).build();
+  BvhBuilder(hittablesData, rootHittables).build();
 
   if (perlinsData.empty())
     perlinsData.emplace_back();

@@ -4,11 +4,8 @@ https://github.com/RayTracing/raytracing.github.io
 
 == The output
 image::rendered_pictures/float_depth100_sample500_1.bmp[Rendered image, width=600]
-image::rendered_pictures/float_depth100_sample500_2.bmp[Rendered image, width=600]
-image::rendered_pictures/float_depth100_sample500_3.bmp[Rendered image, width=600]
-image::rendered_pictures/float_depth100_sample500_4.bmp[Rendered image, width=600]
-image::rendered_pictures/float_depth100_sample500_5.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_6.bmp[Rendered image, width=600]
+image::rendered_pictures/float_depth100_sample500_7.bmp[Rendered image, width=600]
 
 == Build
 
@@ -41,6 +38,9 @@ From Book 2 implementation, C++ code is added for CPU, because BVH construction 
 Instead of each hittable's constructor, there is a builder for it. Without builder, bbox on constructor requires unpacking to reach bbox on polymorphism.
 
 Just used Vulkan for texture sampler, instead of uploading pixel SSBO to shader.
+
+`Translation` and `Rotation` are uploaded like all hittables. Because function recursion is impossible, local_ray and local_to_world transformation are stored and accumulated per iteration. 
+HittableList is added; bvh node, hittable list, and transformations push stack entry.
 
 == Help
 

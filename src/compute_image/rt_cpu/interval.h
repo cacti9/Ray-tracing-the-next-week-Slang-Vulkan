@@ -48,3 +48,11 @@ struct Interval {
 
 inline const Interval Interval::empty = Interval(INF, -INF);
 inline const Interval Interval::universe = Interval(-INF, INF);
+
+inline Interval operator+(const Interval& interval, precision_type displacement) {
+  return {interval.min + displacement, interval.max + displacement};
+}
+
+inline Interval operator+(precision_type displacement, const Interval& interval) {
+  return interval + displacement;
+}
