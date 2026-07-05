@@ -209,6 +209,69 @@ void cornell_smoke(RtCpuBuilder& builder, CameraSettings& camera) {
   builder.addConstantMedium(box1, 0.01, {0, 0, 0});
   builder.addConstantMedium(box2, 0.01, {1, 1, 1});
 }
+
+void final_scene(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {478, 278, -600},
+    .look_at = {278, 278, 0},
+    .vup = {0, 1, 0},
+    .background = {0, 0, 0},
+    .vfov = 40.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  std::mt19937 randomEngine{1};
+  auto randomRange = [&](precision_type min, precision_type max) {
+    std::uniform_real_distribution<precision_type> distribution{min, max};
+    return distribution(randomEngine);
+  };
+
+  const uint32_t ground = builder.addLambertian({0.48, 0.83, 0.53});
+  const uint32_t boxes1First = builder.hittableCount();
+  constexpr int boxesPerSide = 20;
+  for (int i = 0; i < boxesPerSide; i++) {
+    for (int j = 0; j < boxesPerSide; j++) {
+      const precision_type w = 100.0;
+      const precision_type x0 = -1000.0 + i * w;
+      const precision_type z0 = -1000.0 + j * w;
+      const precision_type y0 = 0.0;
+      const precision_type x1 = x0 + w;
+      const precision_type y1 = randomRange(1, 101);
+      const precision_type z1 = z0 + w;
+
+      builder.addBox({x0, y0, z0}, {x1, y1, z1}, ground, false);
+    }
+  }
+  builder.addBvhFromRange(boxes1First, builder.hittableCount() - boxes1First);
+
+  const uint32_t light = builder.addDiffuseLight({7, 7, 7});
+  builder.addQuad({123, 554, 147}, {300, 0, 0}, {0, 0, 265}, light);
+
+  const glm::vec<3, precision_type> center1{400, 400, 200};
+  const glm::vec<3, precision_type> center2 = center1 + glm::vec<3, precision_type>{30, 0, 0};
+  builder.addMovingSphere(center1, center2, 50, builder.addLambertian({0.7, 0.3, 0.1}));
+  builder.addStaticSphere({260, 150, 45}, 50, builder.addDielectric(1.5));
+  builder.addStaticSphere({0, 150, 145}, 50, builder.addMetal({0.8, 0.8, 0.9}, 1.0));
+
+  const uint32_t glassBoundary = builder.addStaticSphere({360, 150, 145}, 70, builder.addDielectric(1.5));
+  builder.addConstantMedium(glassBoundary, 0.2, {0.2, 0.4, 0.9});
+  const uint32_t atmosphereBoundary = builder.addStaticSphere({0, 0, 0}, 5000, builder.addDielectric(1.5), false);
+  builder.addConstantMedium(atmosphereBoundary, 0.0001, {1, 1, 1});
+
+  builder.addStaticSphere({400, 200, 400}, 100, builder.addLambertian(builder.addImageTexture("earthmap.jpg")));
+  builder.addStaticSphere({220, 280, 300}, 80, builder.addLambertian(builder.addNoiseTexture(0.2)));
+
+  const uint32_t white = builder.addLambertian({0.73, 0.73, 0.73});
+  const uint32_t boxes2First = builder.hittableCount();
+  constexpr int sphereCount = 1000;
+  for (int j = 0; j < sphereCount; j++) {
+    builder.addStaticSphere({randomRange(0, 165), randomRange(0, 165), randomRange(0, 165)}, 10, white, false);
+  }
+  const uint32_t boxes2Bvh = builder.addBvhFromRange(boxes2First, builder.hittableCount() - boxes2First, false);
+  const uint32_t rotatedBoxes2 = builder.addRotateY(boxes2Bvh, 15, false);
+  builder.addTranslate(rotatedBoxes2, {-100, 270, 395});
+}
 } // namespace
 
 void ComputeImageRenderer::populateWorld() {
@@ -221,7 +284,7 @@ void ComputeImageRenderer::populateWorld() {
 
   RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData, rootHittables);
 
-  switch (8) {
+  switch (9) {
   case 1:
     bouncing_spheres(builder, cameraSettings);
     break;
@@ -245,6 +308,9 @@ void ComputeImageRenderer::populateWorld() {
     break;
   case 8:
     cornell_smoke(builder, cameraSettings);
+    break;
+  case 9:
+    final_scene(builder, cameraSettings);
     break;
   }
 

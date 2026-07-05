@@ -99,29 +99,35 @@ struct RtCpuBuilder {
     return addMaterial(MaterialType::Isotropic, Isotropic{.texture_index = texture_index});
   }
 
-  void addStaticSphere(glm::vec<3, precision_type> static_center, precision_type radius, uint32_t materialIndex) {
+  uint32_t
+  addStaticSphere(glm::vec<3, precision_type> static_center, precision_type radius, uint32_t materialIndex, bool root = true) {
     const precision_type clampedRadius = std::max(precision_type(0), radius);
     Sphere sphere{
       .center = {static_center, glm::vec<3, precision_type>(0, 0, 0), 0}, .radius = clampedRadius, .material_index = materialIndex
     };
-    addHittable(HittableType::Sphere, sphere_bbox(static_center, clampedRadius), sphere);
+    return addHittable(HittableType::Sphere, sphere_bbox(static_center, clampedRadius), sphere, root);
   }
 
-  void addMovingSphere(
-    glm::vec<3, precision_type> center1, glm::vec<3, precision_type> center2, precision_type radius, uint32_t materialIndex
+  uint32_t addMovingSphere(
+    glm::vec<3, precision_type> center1, glm::vec<3, precision_type> center2, precision_type radius, uint32_t materialIndex,
+    bool root = true
   ) {
     const precision_type clampedRadius = std::max(precision_type(0), radius);
     Sphere sphere{.center = {center1, center2 - center1, 0}, .radius = clampedRadius, .material_index = materialIndex};
-    addHittable(HittableType::Sphere, Aabb(sphere_bbox(center1, clampedRadius), sphere_bbox(center2, clampedRadius)), sphere);
+    return addHittable(
+      HittableType::Sphere, Aabb(sphere_bbox(center1, clampedRadius), sphere_bbox(center2, clampedRadius)), sphere, root
+    );
   }
 
-  void
-  addQuad(glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex) {
-    (void)addQuadNode(Q, u, v, materialIndex, true);
+  uint32_t addQuad(
+    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex,
+    bool root = true
+  ) {
+    return addQuadNode(Q, u, v, materialIndex, root);
   }
 
-  void addBox(glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex) {
-    (void)addBoxNode(a, b, materialIndex, true);
+  uint32_t addBox(glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex, bool root = true) {
+    return addBoxNode(a, b, materialIndex, root);
   }
 
   uint32_t addBox(
@@ -149,21 +155,23 @@ struct RtCpuBuilder {
     return addHittable(HittableType::RotateY, rotate_y_bbox(hittables[hittableIndex].bbox, rotate), rotate, root);
   }
 
-  void addConstantMedium(uint32_t boundary_hittable_index, precision_type density, uint32_t texture_index) {
+  uint32_t addConstantMedium(uint32_t boundary_hittable_index, precision_type density, uint32_t texture_index, bool root = true) {
     ConstantMedium constantMedium{
       .boundary_hittable_index = boundary_hittable_index,
       .neg_inv_density = -1 / density,
       .phase_function_material_index = addIsotropic(texture_index)
     };
-    addHittable(HittableType::ConstantMedium, hittables[boundary_hittable_index].bbox, constantMedium);
+    return addHittable(HittableType::ConstantMedium, hittables[boundary_hittable_index].bbox, constantMedium, root);
   }
-  void addConstantMedium(uint32_t boundary_hittable_index, precision_type density, glm::vec<3, precision_type> albedo) {
+  uint32_t addConstantMedium(
+    uint32_t boundary_hittable_index, precision_type density, glm::vec<3, precision_type> albedo, bool root = true
+  ) {
     ConstantMedium constantMedium{
       .boundary_hittable_index = boundary_hittable_index,
       .neg_inv_density = -1 / density,
       .phase_function_material_index = addIsotropic(albedo)
     };
-    addHittable(HittableType::ConstantMedium, hittables[boundary_hittable_index].bbox, constantMedium);
+    return addHittable(HittableType::ConstantMedium, hittables[boundary_hittable_index].bbox, constantMedium, root);
   }
 
   uint32_t addSolidColor(glm::vec<3, precision_type> albedo) {
@@ -192,6 +200,10 @@ struct RtCpuBuilder {
     }
     return addTexture(TextureType::Noise, NoiseTexture{.scale = scale});
   }
+
+  uint32_t hittableCount() const { return static_cast<uint32_t>(hittables.size()); }
+
+  uint32_t addBvhFromRange(uint32_t first, uint32_t count, bool root = true);
 
 private:
   uint32_t addBoxNode(glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex, bool root) {
@@ -305,9 +317,9 @@ private:
 
 struct BvhBuilder {
   std::vector<Hittable>& hittables;
-  const std::vector<uint32_t>& rootHittables;
+  std::vector<uint32_t>& rootHittables;
 
-  explicit BvhBuilder(std::vector<Hittable>& hittables_, const std::vector<uint32_t>& rootHittables_)
+  explicit BvhBuilder(std::vector<Hittable>& hittables_, std::vector<uint32_t>& rootHittables_)
       : hittables(hittables_), rootHittables(rootHittables_) {}
 
   void build() {
@@ -316,19 +328,10 @@ struct BvhBuilder {
     }
 
     std::vector<uint32_t> hittableIndices(rootHittables.begin(), rootHittables.end());
-    (void)build(hittableIndices, 0, hittableIndices.size());
+    (void)build(hittableIndices, 0, hittableIndices.size(), true);
   }
 
-private:
-  uint32_t addBvhNode(uint32_t left, uint32_t right, const Aabb& bbox) {
-    BvhNode node(left, right);
-    Hittable hittable{.type = HittableType::BvhNode, .bbox = bbox};
-    std::memcpy(hittable.data.data(), &node, sizeof(node));
-    hittables.push_back(hittable);
-    return static_cast<uint32_t>(hittables.size() - 1);
-  }
-
-  uint32_t build(std::vector<uint32_t>& hittableIndices, size_t start, size_t end) {
+  uint32_t build(std::vector<uint32_t>& hittableIndices, size_t start, size_t end, bool root) {
     Aabb spanBox;
     for (size_t objectIndex = start; objectIndex < end; objectIndex++) {
       spanBox = Aabb(spanBox, hittables[hittableIndices[objectIndex]].bbox);
@@ -341,15 +344,40 @@ private:
 
     const size_t objectSpan = end - start;
     if (objectSpan == 1) {
+      if (root) {
+        rootHittables.push_back(hittableIndices[start]);
+      }
       return hittableIndices[start];
     }
     if (objectSpan == 2) {
-      return addBvhNode(hittableIndices[start], hittableIndices[start + 1], spanBox);
+      return addBvhNode(hittableIndices[start], hittableIndices[start + 1], spanBox, root);
     }
 
     const size_t mid = start + objectSpan / 2;
-    const uint32_t left = build(hittableIndices, start, mid);
-    const uint32_t right = build(hittableIndices, mid, end);
-    return addBvhNode(left, right, spanBox);
+    const uint32_t left = build(hittableIndices, start, mid, false);
+    const uint32_t right = build(hittableIndices, mid, end, false);
+    return addBvhNode(left, right, spanBox, root);
+  }
+
+private:
+  uint32_t addBvhNode(uint32_t left, uint32_t right, const Aabb& bbox, bool root = false) {
+    BvhNode node(left, right);
+    Hittable hittable{.type = HittableType::BvhNode, .bbox = bbox};
+    std::memcpy(hittable.data.data(), &node, sizeof(node));
+    hittables.push_back(hittable);
+    const uint32_t index = static_cast<uint32_t>(hittables.size() - 1);
+    if (root) {
+      rootHittables.push_back(index);
+    }
+    return index;
   }
 };
+
+inline uint32_t RtCpuBuilder::addBvhFromRange(uint32_t first, uint32_t count, bool root) {
+  std::vector<uint32_t> indices;
+  indices.reserve(count);
+  for (uint32_t i = 0; i < count; i++) {
+    indices.push_back(first + i);
+  }
+  return BvhBuilder(hittables, rootHittables).build(indices, 0, indices.size(), root);
+}
