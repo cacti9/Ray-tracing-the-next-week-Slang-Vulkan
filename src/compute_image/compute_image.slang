@@ -13,6 +13,8 @@ struct UniformBuffer {
   uint max_depth;
   uint samples_per_pixel;
   float defocus_angle;
+  uint iter_count;
+  uint rndSeed;
 };
 [[vk::binding(0, 0)]] ConstantBuffer<UniformBuffer> ubo;
 
@@ -23,6 +25,7 @@ struct UniformBuffer {
 [[vk::binding(5, 0)]] Texture2D<float4> image_textures[MAX_IMAGE_TEXTURES];
 [[vk::binding(6, 0)]] SamplerState image_sampler;
 [[vk::binding(7, 0)]] StructuredBuffer<Perlin> the_perlins;
+[[vk::binding(8, 0)]] RWStructuredBuffer<float> acc_pixels;
 
 color ray_color(inout uint rngState, ray r, uint maxDepth) {
   TextureContext texture_context = { the_textures, image_textures, image_sampler, the_perlins };
@@ -92,10 +95,17 @@ void compMain(uint3 threadId: SV_DispatchThreadID) {
   ray r = { camera_center, ray_direction };
 
   color pixel_color = { 0. };
-  uint rngState = threadId.y * width + threadId.x;
+  uint i = threadId.y * width + threadId.x;
+  uint rngState = i + ubo.rndSeed;
   for (int sample = 0; sample < samples_per_pixel; ++sample) {
     ray r = get_ray(rngState, threadId.x, threadId.y);
     pixel_color += ray_color(rngState, r, max_depth);
   }
+  acc_pixels[i*3] += pixel_color.r;
+  acc_pixels[i*3+1] += pixel_color.g;
+  acc_pixels[i*3+2] += pixel_color.b;
+  pixel_color.r = acc_pixels[i*3] / ubo.iter_count;
+  pixel_color.g = acc_pixels[i*3+1] / ubo.iter_count;
+  pixel_color.b = acc_pixels[i*3+2] / ubo.iter_count;
   pixels[threadId.y * width + threadId.x] = precision_type3_to_packed_uint(pixel_color, samples_per_pixel);
 }

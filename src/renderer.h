@@ -18,6 +18,8 @@ public:
   }
   uint32_t maxDepthRequested = 10;
   uint32_t samplesPerPixelRequested = 10;
+  int redrawRequested = 0;
+  uint32_t iterCount = 1;
 
 private:
   GLFWwindow* window = nullptr;
@@ -56,7 +58,6 @@ private:
 
   bool framebufferResized = false;
   bool saveBmpRequested = false;
-  int redrawRequested = 0;
 
   std::vector<const char*> requiredDeviceExtension = {
     vk::KHRSwapchainExtensionName,
@@ -130,7 +131,7 @@ private:
   void recreateSwapChain();
   void cleanupSwapChain();
   void updateUniformBuffer(uint32_t currentImage);
-  void savePixelBufferToBmp(uint32_t currentFrame);
+  void savePixelBufferToBmp(uint32_t currentFrame, uint32_t samples = 0);
   void recordFrameCommandBuffer(uint32_t imageIndex);
   void recordBufferBarrier(
     vk::raii::CommandBuffer& commandBuffer, vk::Buffer buffer, vk::DeviceSize size, vk::AccessFlags2 src_access_mask,

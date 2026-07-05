@@ -53,6 +53,8 @@ struct UniformBufferObject {
   uint32_t max_depth;
   uint32_t samples_per_pixel;
   float defocus_angle;
+  uint32_t iter_count;
+  uint32_t rnd_seed;
 };
 
 struct ShaderLoader {

@@ -14,6 +14,8 @@ struct ComputeImageRenderer {
   std::vector<vk::raii::DescriptorSet> descriptorSets;
   std::vector<vk::Buffer> pixelBuffers;
   vk::DeviceSize pixelBufferSize = 0;
+  std::vector<vk::Buffer> accBuffers;
+  vk::DeviceSize accBufferSize = 0;
   std::vector<vk::Buffer> hittableBuffers;
   std::vector<Hittable> hittablesData;
   vk::DeviceSize hittableBufferSize = 0;

@@ -19,4 +19,10 @@ void VulkanRenderer::keyCallback(GLFWwindow* window, int key, int scancode, int 
     app->redrawRequested = MAX_FRAMES_IN_FLIGHT;
     return;
   }
+  if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+    auto app = static_cast<VulkanRenderer*>(glfwGetWindowUserPointer(window));
+    std::cout << "number of redraw: : ";
+    std::cin >> app->redrawRequested;
+    return;
+  }
 }

@@ -329,7 +329,7 @@ public bool hit(
 
         precision_type ray_length = length(entry.local_ray.dir);
         precision_type distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
-        precision_type hit_distance = constantMedium.neg_inv_density * log(random(rngState));
+        precision_type hit_distance = constantMedium.neg_inv_density * log(float(random(rngState)));
 
         if (hit_distance > distance_inside_boundary)
           break;

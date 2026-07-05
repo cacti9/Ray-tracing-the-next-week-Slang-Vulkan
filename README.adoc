@@ -3,7 +3,11 @@ This project is a Slang shader implementation of  _Ray Tracing The Next Week_.
 https://github.com/RayTracing/raytracing.github.io
 
 == The output
-image::rendered_pictures/float_depth100_sample100_9.bmp[Rendered image, width=600]
+image::rendered_pictures/float_depth100_sample100000_9.bmp[Rendered image, width=600]
+float, depth100, sample100000. qhd.
+
+The below are all float, depth100, sample500. qhd.
+
 image::rendered_pictures/float_depth100_sample500_1.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_6.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_7.bmp[Rendered image, width=600]

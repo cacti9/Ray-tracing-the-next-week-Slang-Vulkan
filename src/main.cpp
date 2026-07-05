@@ -9,6 +9,7 @@ int main() {
     std::cin >> app.maxDepthRequested;
     std::cout << "samples per pixel: : ";
     std::cin >> app.samplesPerPixelRequested;
+
     app.run();
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;

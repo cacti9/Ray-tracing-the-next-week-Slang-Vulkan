@@ -4,10 +4,11 @@
 #include <cstring>
 #include <fstream>
 #include <glm/ext/quaternion_geometric.hpp>
+#include <string>
 #include <vector>
 
 namespace {
-void writeBmp32(const char* path, uint32_t width, uint32_t height, const void* bgraPixels) {
+void writeBmp32(std::string path, uint32_t width, uint32_t height, const void* bgraPixels) {
   const uint32_t rowSize = width * 4;
   const uint32_t pixelDataSize = rowSize * height;
   const uint32_t fileSize = 14 + 40 + pixelDataSize;
@@ -74,7 +75,7 @@ void VulkanRenderer::drawFrame() {
     ;
 
   if (saveBmpRequested) {
-    savePixelBufferToBmp(currentFrame);
+    savePixelBufferToBmp(currentFrame, iterCount - 1);
     saveBmpRequested = false;
   }
 
@@ -121,6 +122,7 @@ void VulkanRenderer::recreateSwapChain() {
   std::cerr << width << " " << height << std::endl;
   computeImageRenderer.createBuffers(*gpuResources, swapChainExtent);
   computeImageRenderer.createDescriptorSets(device, descriptorPool, uniformBuffers);
+  iterCount = 1;
 }
 void VulkanRenderer::cleanupSwapChain() {
   swapChainImageViews.clear();
@@ -169,15 +171,19 @@ void VulkanRenderer::updateUniformBuffer(uint32_t currentImage) {
   ubo.background = {camera.background, 0.};
   ubo.hittable_count = computeImageRenderer.hittablesData.size();
 
+  ubo.iter_count = iterCount;
+  std::mt19937 gen(std::random_device{}());
+  ubo.rnd_seed = gen();
+
   memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
-void VulkanRenderer::savePixelBufferToBmp(uint32_t currentFrame) {
+void VulkanRenderer::savePixelBufferToBmp(uint32_t currentFrame, uint32_t samples) {
   std::vector<uint8_t> pixels(static_cast<size_t>(computeImageRenderer.pixelOutputSize()));
   gpuResources->readDeviceLocalBuffer(
     computeImageRenderer.pixelBuffer(currentFrame), pixels.data(), computeImageRenderer.pixelOutputSize()
   );
-  writeBmp32("compute_image.bmp", swapChainExtent.width, swapChainExtent.height, pixels.data());
+  writeBmp32("compute_image" + std::to_string(samples) + ".bmp", swapChainExtent.width, swapChainExtent.height, pixels.data());
 }
 
 void VulkanRenderer::recordFrameCommandBuffer(uint32_t imageIndex) {
@@ -185,8 +191,16 @@ void VulkanRenderer::recordFrameCommandBuffer(uint32_t imageIndex) {
   frameCommandBuffers[currentFrame].begin({});
   if (redrawRequested) {
     computeImageRenderer.recordComputeDispatch(frameCommandBuffers[currentFrame], currentFrame);
+    ++iterCount;
+    std::cout << "next iterCount: " << iterCount << std::endl;
     std::cerr << "compute dispatched." << std::endl;
     redrawRequested--;
+    if (
+      iterCount == 101 || iterCount == 501 || iterCount == 1001 || iterCount == 5001 || iterCount == 10001 || iterCount == 20001 ||
+      iterCount == 50001 || iterCount == 100001
+    ) {
+      saveBmpRequested = true;
+    }
   }
   recordBufferBarrier(
     frameCommandBuffers[currentFrame],

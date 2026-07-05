@@ -357,7 +357,7 @@ void VulkanRenderer::createDescriptorPool() {
   const uint32_t descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
   std::array poolSize{
     vk::DescriptorPoolSize{vk::DescriptorType::eUniformBuffer, descriptorSetCount},
-    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 5},
+    vk::DescriptorPoolSize{vk::DescriptorType::eStorageBuffer, descriptorSetCount * 6},
     vk::DescriptorPoolSize{vk::DescriptorType::eSampledImage, descriptorSetCount * MAX_IMAGE_TEXTURES},
     vk::DescriptorPoolSize{vk::DescriptorType::eSampler, descriptorSetCount},
   };

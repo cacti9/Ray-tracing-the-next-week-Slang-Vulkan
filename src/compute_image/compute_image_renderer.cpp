@@ -60,6 +60,7 @@ void ComputeImageRenderer::createDescriptorSetLayout(vk::raii::Device const& dev
     },
     vk::DescriptorSetLayoutBinding{6, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
     vk::DescriptorSetLayoutBinding{7, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
+    vk::DescriptorSetLayoutBinding{8, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eCompute, nullptr},
   };
 
   vk::DescriptorSetLayoutCreateInfo layoutInfo{
@@ -96,6 +97,9 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
   for (auto& perlinBuffer : perlinBuffers) {
     gpuResources.destroyBuffer(perlinBuffer);
   }
+  for (auto& accBuffer : accBuffers) {
+    gpuResources.destroyBuffer(accBuffer);
+  }
   imageTextureImageViews.clear();
   for (auto& imageTextureImage : imageTextureImages) {
     gpuResources.destroyImage(imageTextureImage);
@@ -110,11 +114,19 @@ void ComputeImageRenderer::createBuffers(GpuResources& gpuResources, vk::Extent2
   materialBuffers.clear();
   textureBuffers.clear();
   perlinBuffers.clear();
+  accBuffers.clear();
 
   renderExtent = extent;
   const size_t pixelCount = static_cast<size_t>(renderExtent.width) * static_cast<size_t>(renderExtent.height);
   pixelBufferSize = sizeof(uint32_t) * pixelCount;
+  accBufferSize = sizeof(float) * pixelCount * 3;
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    vk::Buffer accBuffer;
+    gpuResources.createDeviceLocalBuffer(
+      accBuffer, accBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+    );
+    accBuffers.push_back(accBuffer);
+
     vk::Buffer pixelBuffer;
     gpuResources.createDeviceLocalBuffer(
       pixelBuffer,
@@ -201,6 +213,7 @@ void ComputeImageRenderer::createDescriptorSets(
     vk::DescriptorBufferInfo materialBufferInfo{materialBuffers[i], 0, materialBufferSize};
     vk::DescriptorBufferInfo textureBufferInfo{textureBuffers[i], 0, textureBufferSize};
     vk::DescriptorBufferInfo perlinBufferInfo{perlinBuffers[i], 0, perlinBufferSize};
+    vk::DescriptorBufferInfo accBufferInfo{accBuffers[i], 0, accBufferSize};
     std::array<vk::DescriptorImageInfo, MAX_IMAGE_TEXTURES> imageTextureInfos;
     for (size_t imageIndex = 0; imageIndex < imageTextureInfos.size(); imageIndex++) {
       imageTextureInfos[imageIndex] = vk::DescriptorImageInfo{
@@ -273,6 +286,14 @@ void ComputeImageRenderer::createDescriptorSets(
         .descriptorCount = 1,
         .descriptorType = vk::DescriptorType::eStorageBuffer,
         .pBufferInfo = &perlinBufferInfo,
+      },
+      vk::WriteDescriptorSet{
+        .dstSet = *descriptorSets[i],
+        .dstBinding = 8,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = vk::DescriptorType::eStorageBuffer,
+        .pBufferInfo = &accBufferInfo,
       },
     };
     device.updateDescriptorSets(descriptorWrites, {});
