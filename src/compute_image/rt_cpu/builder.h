@@ -70,8 +70,8 @@ struct RtCpuBuilder {
     std::vector<Hittable>& hittables_, std::vector<Material>& materials_, std::vector<Texture>& textures_,
     std::vector<std::string>& imageTexturePaths_, std::vector<Perlin>& perlins_, std::vector<uint32_t>& rootHittables_
   )
-      : hittables(hittables_), materials(materials_), textures(textures_), imageTexturePaths(imageTexturePaths_),
-        perlins(perlins_), rootHittables(rootHittables_) {}
+      : hittables(hittables_), materials(materials_), textures(textures_), imageTexturePaths(imageTexturePaths_), perlins(perlins_),
+        rootHittables(rootHittables_) {}
 
   uint32_t addLambertian(glm::vec<3, precision_type> albedo) { return addLambertian(addSolidColor(albedo)); }
 
@@ -93,6 +93,12 @@ struct RtCpuBuilder {
     return addMaterial(MaterialType::DiffuseLight, DiffuseLight{.texture_index = textureIndex});
   }
 
+  uint32_t addIsotropic(glm::vec<3, precision_type> albedo) { return addIsotropic(addSolidColor(albedo)); }
+
+  uint32_t addIsotropic(uint32_t texture_index) {
+    return addMaterial(MaterialType::Isotropic, Isotropic{.texture_index = texture_index});
+  }
+
   void addStaticSphere(glm::vec<3, precision_type> static_center, precision_type radius, uint32_t materialIndex) {
     const precision_type clampedRadius = std::max(precision_type(0), radius);
     Sphere sphere{
@@ -109,25 +115,22 @@ struct RtCpuBuilder {
     addHittable(HittableType::Sphere, Aabb(sphere_bbox(center1, clampedRadius), sphere_bbox(center2, clampedRadius)), sphere);
   }
 
-  void addQuad(
-    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex
-  ) {
+  void
+  addQuad(glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex) {
     (void)addQuadNode(Q, u, v, materialIndex, true);
   }
 
-  void addBox(
-    glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex
-  ) {
+  void addBox(glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex) {
     (void)addBoxNode(a, b, materialIndex, true);
   }
 
-  void addBox(
-    glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, precision_type angle,
-    glm::vec<3, precision_type> offset, uint32_t materialIndex
+  uint32_t addBox(
+    glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, precision_type angle, glm::vec<3, precision_type> offset,
+    uint32_t materialIndex, bool root = true
   ) {
     const uint32_t box = addBoxNode(a, b, materialIndex, false);
     const uint32_t rotatedBox = addRotateY(box, angle, false);
-    (void)addTranslate(rotatedBox, offset, true);
+    return addTranslate(rotatedBox, offset, root);
   }
 
   uint32_t addTranslate(uint32_t hittableIndex, glm::vec<3, precision_type> offset, bool root = true) {
@@ -144,6 +147,23 @@ struct RtCpuBuilder {
       .cos_theta = std::cos(radians),
     };
     return addHittable(HittableType::RotateY, rotate_y_bbox(hittables[hittableIndex].bbox, rotate), rotate, root);
+  }
+
+  void addConstantMedium(uint32_t boundary_hittable_index, precision_type density, uint32_t texture_index) {
+    ConstantMedium constantMedium{
+      .boundary_hittable_index = boundary_hittable_index,
+      .neg_inv_density = -1 / density,
+      .phase_function_material_index = addIsotropic(texture_index)
+    };
+    addHittable(HittableType::ConstantMedium, hittables[boundary_hittable_index].bbox, constantMedium);
+  }
+  void addConstantMedium(uint32_t boundary_hittable_index, precision_type density, glm::vec<3, precision_type> albedo) {
+    ConstantMedium constantMedium{
+      .boundary_hittable_index = boundary_hittable_index,
+      .neg_inv_density = -1 / density,
+      .phase_function_material_index = addIsotropic(albedo)
+    };
+    addHittable(HittableType::ConstantMedium, hittables[boundary_hittable_index].bbox, constantMedium);
   }
 
   uint32_t addSolidColor(glm::vec<3, precision_type> albedo) {
@@ -177,16 +197,13 @@ private:
   uint32_t addBoxNode(glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex, bool root) {
     const uint32_t first = static_cast<uint32_t>(hittables.size());
     Aabb bbox;
-    addBoxFaces(a, b, materialIndex, [&](uint32_t faceIndex) {
-      bbox = Aabb(bbox, hittables[faceIndex].bbox);
-    });
+    addBoxFaces(a, b, materialIndex, [&](uint32_t faceIndex) { bbox = Aabb(bbox, hittables[faceIndex].bbox); });
     HittableList list{.first = first, .count = static_cast<uint32_t>(hittables.size() - first)};
     return addHittable(HittableType::HittableList, bbox, list, root);
   }
 
   uint32_t addQuadNode(
-    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex,
-    bool root
+    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v, uint32_t materialIndex, bool root
   ) {
     const glm::vec<3, precision_type> n = glm::cross(u, v);
     const glm::vec<3, precision_type> normal = glm::normalize(n);
@@ -202,9 +219,8 @@ private:
     return addHittable(HittableType::Quad, quad_bbox(Q, u, v), quad, root);
   }
 
-  template <typename AddFace> void addBoxFaces(
-    glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex, AddFace addFace
-  ) {
+  template <typename AddFace>
+  void addBoxFaces(glm::vec<3, precision_type> a, glm::vec<3, precision_type> b, uint32_t materialIndex, AddFace addFace) {
     const glm::vec<3, precision_type> min = glm::min(a, b);
     const glm::vec<3, precision_type> max = glm::max(a, b);
 
@@ -256,9 +272,7 @@ private:
     return Aabb(center - rvec, center + rvec);
   }
 
-  static Aabb quad_bbox(
-    glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v
-  ) {
+  static Aabb quad_bbox(glm::vec<3, precision_type> Q, glm::vec<3, precision_type> u, glm::vec<3, precision_type> v) {
     const Aabb bboxDiagonal1(Q, Q + u + v);
     const Aabb bboxDiagonal2(Q + u, Q + v);
     return Aabb(bboxDiagonal1, bboxDiagonal2);

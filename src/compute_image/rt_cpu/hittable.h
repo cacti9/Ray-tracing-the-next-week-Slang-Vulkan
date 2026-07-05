@@ -13,6 +13,7 @@ enum class HittableType : uint32_t {
   HittableList,
   Translate,
   RotateY,
+  ConstantMedium,
 };
 
 constexpr uint32_t HITTABLE_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 40 : 24;
@@ -67,4 +68,10 @@ struct RotateY {
   uint32_t hittable_index;
   precision_type sin_theta;
   precision_type cos_theta;
+};
+
+struct ConstantMedium {
+  uint32_t boundary_hittable_index;
+  precision_type neg_inv_density;
+  uint32_t phase_function_material_index; // isotropic
 };

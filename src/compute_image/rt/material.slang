@@ -16,6 +16,7 @@ public enum MaterialType {
   Metal,
   Dielectric,
   DiffuseLight,
+  Isotropic,
 };
 
 public static const uint MATERIAL_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 8 : 4;
@@ -54,6 +55,9 @@ public struct Material : material {
     case MaterialType::DiffuseLight:
       attenuation = color(0.0);
       return false;
+    case MaterialType::Isotropic:
+      Isotropic i = reinterpret<Isotropic>(data);
+      return i.scatter(texture_context, rngState, r_in, rec, attenuation, scattered);
     default:
       attenuation = {0.}; // idk
       return false; // idk
@@ -161,5 +165,22 @@ public struct DiffuseLight : material {
   ) {
     attenuation = color(0.0);
     return false;
+  }
+}
+
+public struct Isotropic : material {
+  public uint texture_index;
+
+  bool scatter(
+    TextureContext texture_context,
+    inout uint rngState,
+    const ray r_in,
+    const hit_record rec,
+    out color attenuation,
+    inout ray scattered
+  ) {
+    scattered = ray(rec.p, random_unit_vector(rngState), r_in.tm);
+    attenuation = texture_value(texture_context, texture_index, rec.u, rec.v, rec.p);
+    return true;
   }
 }

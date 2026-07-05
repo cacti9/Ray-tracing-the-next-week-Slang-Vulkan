@@ -179,6 +179,36 @@ void cornell_box(RtCpuBuilder& builder, CameraSettings& camera) {
   builder.addBox({0, 0, 0}, {165, 330, 165}, 15, {265, 0, 295}, white);
   builder.addBox({0, 0, 0}, {165, 165, 165}, -18, {130, 0, 65}, white);
 }
+
+void cornell_smoke(RtCpuBuilder& builder, CameraSettings& camera) {
+  camera = {
+    .look_from = {278, 278, -800},
+    .look_at = {278, 278, 0},
+    .vup = {0, 1, 0},
+    .background = {0, 0, 0},
+    .vfov = 40.0,
+    .defocus_angle = 0.0,
+    .focus_dist = 10.0,
+  };
+
+  const uint32_t red = builder.addLambertian({0.65, 0.05, 0.05});
+  const uint32_t white = builder.addLambertian({0.73, 0.73, 0.73});
+  const uint32_t green = builder.addLambertian({0.12, 0.45, 0.15});
+  const uint32_t light = builder.addDiffuseLight({7, 7, 7});
+
+  builder.addQuad({555, 0, 0}, {0, 555, 0}, {0, 0, 555}, green);
+  builder.addQuad({0, 0, 0}, {0, 555, 0}, {0, 0, 555}, red);
+  builder.addQuad({113, 554, 127}, {330, 0, 0}, {0, 0, 305}, light);
+  builder.addQuad({0, 0, 0}, {555, 0, 0}, {0, 0, 555}, white);
+  builder.addQuad({555, 555, 555}, {-555, 0, 0}, {0, 0, -555}, white);
+  builder.addQuad({0, 0, 555}, {555, 0, 0}, {0, 555, 0}, white);
+
+  uint32_t box1 = builder.addBox({0, 0, 0}, {165, 330, 165}, 15, {265, 0, 295}, white, false);
+  uint32_t box2 = builder.addBox({0, 0, 0}, {165, 165, 165}, -18, {130, 0, 65}, white, false);
+
+  builder.addConstantMedium(box1, 0.01, {0, 0, 0});
+  builder.addConstantMedium(box2, 0.01, {1, 1, 1});
+}
 } // namespace
 
 void ComputeImageRenderer::populateWorld() {
@@ -191,7 +221,7 @@ void ComputeImageRenderer::populateWorld() {
 
   RtCpuBuilder builder(hittablesData, materialsData, texturesData, imageTexturePaths, perlinsData, rootHittables);
 
-  switch (7) {
+  switch (8) {
   case 1:
     bouncing_spheres(builder, cameraSettings);
     break;
@@ -212,6 +242,9 @@ void ComputeImageRenderer::populateWorld() {
     break;
   case 7:
     cornell_box(builder, cameraSettings);
+    break;
+  case 8:
+    cornell_smoke(builder, cameraSettings);
     break;
   }
 

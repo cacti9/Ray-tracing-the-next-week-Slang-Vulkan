@@ -26,6 +26,7 @@ public enum HittableType {
   HittableList,
   Translate,
   RotateY,
+  ConstantMedium,
 };
 
 public struct BvhNode {
@@ -217,6 +218,7 @@ internal struct TraversalEntry {
 public bool hit(
   StructuredBuffer<Hittable> world,
   uint hittable_count,
+  inout uint rngState,
   ray r,
   interval ray_t,
   inout hit_record rec) {
@@ -301,6 +303,44 @@ public bool hit(
       {
         Quad quad = reinterpret<Quad>(world[entry.hittable_index].data);
         hit_on_primitive = quad.hit(entry.local_ray, interval(ray_t.min, closest_so_far), primitive_hit_rec);
+      }
+      break;
+    case HittableType::ConstantMedium:
+      {
+        ConstantMedium constantMedium = reinterpret<ConstantMedium>(world[entry.hittable_index].data);
+        hit_record rec1, rec2;
+
+        if (!world[hittable_index].bbox.hit(entry.local_ray, interval(ray_t.min, closest_so_far)))
+          break;
+
+        if (!ConstantMedium::hit_boundary_pair(world, constantMedium.boundary_hittable_index, entry.local_ray, interval::universe(), rec1, rec2))
+          break;
+
+        if (rec1.t < ray_t.min)
+          rec1.t = ray_t.min;
+        if (rec2.t > closest_so_far)
+          rec2.t = closest_so_far;
+
+        if (rec1.t >= rec2.t)
+          break;
+
+        if (rec1.t < 0)
+          rec1.t = 0;
+
+        precision_type ray_length = length(entry.local_ray.dir);
+        precision_type distance_inside_boundary = (rec2.t - rec1.t) * ray_length;
+        precision_type hit_distance = constantMedium.neg_inv_density * log(random(rngState));
+
+        if (hit_distance > distance_inside_boundary)
+          break;
+
+        primitive_hit_rec.t = rec1.t + hit_distance / ray_length;
+        primitive_hit_rec.p = entry.local_ray.at(primitive_hit_rec.t);
+        primitive_hit_rec.normal = vec3(1, 0, 0);
+        primitive_hit_rec.front_face = true;
+        primitive_hit_rec.material_index = constantMedium.phase_function_material_index;
+
+        hit_on_primitive = true;
       }
       break;
     default:

@@ -6,6 +6,7 @@ https://github.com/RayTracing/raytracing.github.io
 image::rendered_pictures/float_depth100_sample500_1.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_6.bmp[Rendered image, width=600]
 image::rendered_pictures/float_depth100_sample500_7.bmp[Rendered image, width=600]
+image::rendered_pictures/float_depth100_sample500_8.bmp[Rendered image, width=600]
 
 == Build
 
@@ -45,6 +46,8 @@ Just used Vulkan for texture sampler, instead of uploading pixel SSBO to shader.
 
 `Translation` and `Rotation` are uploaded like all hittables. Because function recursion is impossible, local_ray and local_to_world transformation are stored and accumulated per iteration. 
 HittableList is added; bvh node, hittable list, and transformations push stack entry.
+
+`ConstantMedium` implementation required two hit records, enter and exit. To maintain generality, and not to further complicate global hit(), I just copied hit() into ConstantMedium with limited functionalities.
 
 == Help
 

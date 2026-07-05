@@ -12,6 +12,7 @@ enum class MaterialType : uint32_t {
   Metal,
   Dielectric,
   DiffuseLight,
+  Isotropic,
 };
 
 constexpr uint32_t MATERIAL_DATA_SIZE = RT_PRECISION_IS_DOUBLE ? 8 : 4;
@@ -36,5 +37,9 @@ struct Dielectric {
 };
 
 struct DiffuseLight {
+  uint32_t texture_index;
+};
+
+struct Isotropic {
   uint32_t texture_index;
 };

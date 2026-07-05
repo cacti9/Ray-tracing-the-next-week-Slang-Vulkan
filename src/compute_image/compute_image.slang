@@ -34,7 +34,7 @@ color ray_color(inout uint rngState, ray r, uint maxDepth) {
   color attenuation;
   for (uint depth = 0; depth < maxDepth; depth++) {
 
-    if (hit(the_world, ubo.hittable_count, r, interval( 0.001, INF ), rec)) {
+    if (hit(the_world, ubo.hittable_count, rngState, r, interval( 0.001, INF ), rec)) {
       Material material = the_world_mat[rec.material_index];
       color from_emission = path_weight * material.emitted(texture_context, rec.u, rec.v, rec.p);
       accumulated += from_emission;
